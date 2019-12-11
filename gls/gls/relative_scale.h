@@ -15,4 +15,8 @@ std::vector<std::pair<Point, Point>> compute_matching_pairs_after_rescaling(std:
 
 typedef Point::Scalar Scalar;
 typedef Point::VectorType VectorType;
+std::pair<Scalar, std::vector<std::tuple<Point, Point, Scalar>>> compute_3_closest_pairs_with_scale(std::vector<std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>>>& source_gls_profiles, std::vector<std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>>>& target_gls_profiles, Scalar ratio, int nb_samples, VectorType w, Scalar alpha = 1.0);
+
+typedef Point::Scalar Scalar;
+typedef Point::VectorType VectorType;
 std::pair<Scalar, std::vector<std::tuple<Point, Point, Scalar>>> relative_scale_estimation(std::vector<std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>>>& source_gls_profiles, std::vector<std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>>>& target_gls_profiles, Scalar ratio, int nb_samples, VectorType w = VectorType::Ones(), Scalar alpha = 1.0);
