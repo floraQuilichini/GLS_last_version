@@ -115,7 +115,7 @@ Scalar  compute_geometric_variation(DFit& _fit, vector<Point>& pointCloud, Scala
 }
 
 
-
+/*
 int main(int argc, char** argv)
 {
 
@@ -172,28 +172,6 @@ int main(int argc, char** argv)
 		max_scale = min_scale;
 		nb_samples = 1;
 	}
-/*
-	if (argc == 7)
-	{
-		flag_multiscale = true;
-		pc_filename = argv[1];
-		pc_down_filename = argv[2];
-		min_scale = std::stod(argv[3]);
-		max_scale = std::stod(argv[4]);
-		nb_samples = std::stoi(argv[5]);
-		output_filename = argv[6];
-	}
-	else
-	{
-		flag_multiscale = false;
-		pc_filename = argv[1];
-		pc_down_filename = argv[2];
-		min_scale = std::stod(argv[3]);
-		output_filename = argv[4];
-		max_scale = min_scale;
-		nb_samples = 1;
-	}
-*/
 
 	std::cout << "Input file:  " << pc_filename << std::endl;
 
@@ -251,9 +229,9 @@ int main(int argc, char** argv)
 	return 0;
 
 }
+*/
 
 
-/*
 int main(int argc, char** argv)
 {
 
@@ -266,17 +244,27 @@ int main(int argc, char** argv)
 	std::string descriptors_source_filename, descriptors_target_filename, output_filename;
 	Scalar min_scale, max_scale, base;
 	int nb_samples, nb_source_points, nb_target_points;
+	bool read_geom_var = false;
 
 	descriptors_source_filename = argv[1];
 	descriptors_target_filename = argv[2];
 	output_filename = argv[3];
+	if(argc == 5)
+		read_geom_var = (std::stoi(argv[4]) > 0);
 
 	// get descriptors and headers 
 	std::vector<std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>>> source_descriptors, target_descriptors;
-	read_descriptors_text_file(descriptors_source_filename, source_descriptors, nb_source_points, nb_samples, min_scale, max_scale, base);
-	read_descriptors_text_file(descriptors_target_filename, target_descriptors, nb_target_points, nb_samples, min_scale, max_scale, base);
-
-
+	std::vector<std::pair<Point, std::vector<Scalar>>> source_geom_var, target_geom_var;
+	if (read_geom_var)
+	{
+		read_descriptors_text_file(descriptors_source_filename, source_descriptors, nb_source_points, nb_samples, min_scale, max_scale, base, &source_geom_var);
+		read_descriptors_text_file(descriptors_target_filename, target_descriptors, nb_target_points, nb_samples, min_scale, max_scale, base, &target_geom_var);
+	}
+	else
+	{
+		read_descriptors_text_file(descriptors_source_filename, source_descriptors, nb_source_points, nb_samples, min_scale, max_scale, base);
+		read_descriptors_text_file(descriptors_target_filename, target_descriptors, nb_target_points, nb_samples, min_scale, max_scale, base);
+	}
 
 	// get relative scale estimation
 	Scalar alpha = 1.0;
@@ -294,7 +282,7 @@ int main(int argc, char** argv)
 	return 0;
 
 }
-*/
+
 
 
 /*

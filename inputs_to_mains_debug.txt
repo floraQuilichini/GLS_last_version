@@ -1,6 +1,13 @@
 first main : compute gls descriptors
 C:\Registration\test_multiscale\mesh\bunny.ply  C:\Registration\test_multiscale\mesh\bunny_source_interest_point.ply  0.1292 4.9115 500 C:\\Registration\\test_multiscale\\output\\bunny_profiles.txt
+ou, avec calcul de la variation géométrique
+C:\Registration\test_multiscale\mesh\bunny.ply  C:\Registration\test_multiscale\mesh\bunny_source_interest_point.ply  0.1292 4.9115 500 C:\\Registration\\test_multiscale\\output\\bunny_profiles.txt 1
+
 second main : estimate relative scale
 C:\Registration\test_multiscale\output\gls_scale_estimation\bunny_vsa_complete_profiles.txt  C:\Registration\test_multiscale\output\gls_scale_estimation\bunny_downsampled_vsa_complete_profiles.txt  C:\Registration\test_multiscale\output\gls_scale_estimation\bunny_vsa_bunny_downsampled_vsa_matching.txt
+ou, avec lecture de la variation géométrique
+C:\Registration\test_multiscale\output\gls_scale_estimation\bunny_vsa_complete_profiles.txt  C:\Registration\test_multiscale\output\gls_scale_estimation\bunny_downsampled_vsa_complete_profiles.txt  C:\Registration\test_multiscale\output\gls_scale_estimation\bunny_vsa_bunny_downsampled_vsa_matching.txt 1
+
+
 third main : compute matching pair after rescaling
 C:\Registration\test_multiscale\output\gls_scale_estimation\bunny_vsa_complete_profiles.txt  C:\Registration\test_multiscale\output\gls_scale_estimation\bunny_downsampled_vsa_complete_profiles.txt  C:\Registration\test_multiscale\output\gls_scale_estimation\bunny_vsa_bunny_downsampled_vsa_rescaled_matching.txt
