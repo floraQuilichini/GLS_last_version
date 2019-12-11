@@ -33,6 +33,9 @@
     <ClInclude Include="relative_scale.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="matching_prioritization.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -45,6 +48,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="relative_scale.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="matching_prioritization.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

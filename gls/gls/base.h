@@ -18,6 +18,36 @@ public:
 	MULTIARCH inline VectorType& pos() { return m_pos; }
 	MULTIARCH inline const VectorType& normal()    const { return m_normal; }
 	MULTIARCH inline VectorType& normal() { return m_normal; }
+
 private:
 	VectorType m_pos, m_normal;
+};
+
+
+struct PointComp {
+	bool operator()(const Point& p1, const Point& p2) const
+	{
+		if (p1.pos().x() < p2.pos().x())
+			return true;
+		else
+		{
+			if (p1.pos().x() == p2.pos().x())
+			{
+				if (p1.pos().y() < p2.pos().y())
+					return true;
+				else
+				{
+					if (p1.pos().x() == p2.pos().x())
+					{
+						if (p1.pos().z() < p2.pos().z())
+							return true;
+						else
+							return false;
+					}
+					return false;
+				}
+			}
+			return false;
+		}
+	}
 };

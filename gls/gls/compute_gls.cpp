@@ -17,6 +17,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include "relative_scale.h"
 #include "base.h"
 #include"IO.h"
+#include "matching_prioritization.h"
 #include <vector>
 #include <tuple>
 #include <fstream>
@@ -254,7 +255,7 @@ int main(int argc, char** argv)
 
 	// get descriptors and headers 
 	std::vector<std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>>> source_descriptors, target_descriptors;
-	std::vector<std::pair<Point, std::vector<Scalar>>> source_geom_var, target_geom_var;
+	std::map<Point, std::vector<Scalar>, PointComp> source_geom_var, target_geom_var;
 	if (read_geom_var)
 	{
 		read_descriptors_text_file(descriptors_source_filename, source_descriptors, nb_source_points, nb_samples, min_scale, max_scale, base, &source_geom_var);
@@ -272,8 +273,32 @@ int main(int argc, char** argv)
 	Scalar ratio = 0.1;
 
 	std::pair<Scalar, std::vector<std::tuple<Point, Point, Scalar>>> relative_scale_and_matching_points = relative_scale_estimation(source_descriptors, target_descriptors, ratio, nb_samples, w, alpha);
-
 	std::cout << "relative scale: " << relative_scale_and_matching_points.first << std::endl;
+
+	if (read_geom_var)
+	{
+		pair_priority_queue queue;
+		
+		for (int i = 0; i < relative_scale_and_matching_points.second.size(); i++)
+		{
+			// get matching pair cost
+			Point source = std::get<0>(relative_scale_and_matching_points.second[i]);
+			Point target = std::get<1>(relative_scale_and_matching_points.second[i]);
+			Scalar relative_scale = std::get<2>(relative_scale_and_matching_points.second[i]);
+
+			std::map<Point, std::vector<Scalar>, PointComp>::iterator it_source = source_geom_var.find(source);
+			std::map<Point, std::vector<Scalar>, PointComp>::iterator it_target = target_geom_var.find(target);
+
+			if (it_source != source_geom_var.end() && it_target != target_geom_var.end())
+			{
+				// fill priority queue
+				std::tuple<Point, Point, Scalar>  pair_cost = compute_pair_cost(it_source, it_target, nb_samples, alpha);
+				queue.add_pair(std::make_tuple(source, target, relative_scale, std::get<2>(pair_cost)));
+			}
+			
+		}
+	
+	}
 
 	// write relative scale and matching points in file
 	//std::string output_filename = "C:\\Registration\\test_multiscale\\output\\scales_matching_points.txt";

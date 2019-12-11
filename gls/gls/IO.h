@@ -11,7 +11,7 @@ std::string extract_ext(std::string filename);
 bool read_ply_file(std::string filename, std::vector<Point>& pointCloud);
 
 typedef Point::Scalar Scalar;
-bool read_descriptors_text_file(std::string filename, std::vector<std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>>>& gls_profiles, int& nb_points, int& nb_samples, Scalar& min_scale, Scalar& max_scale, Scalar& base, std::vector<std::pair<Point, std::vector<Scalar>>>* geom_var_ptr = nullptr);
+bool read_descriptors_text_file(std::string filename, std::vector<std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>>>& gls_profiles, int& nb_points, int& nb_samples, Scalar& min_scale, Scalar& max_scale, Scalar& base, std::map<Point, std::vector<Scalar>, PointComp>* geom_var_ptr = nullptr);
 
 typedef Point::Scalar Scalar;
 typedef Point::VectorType VectorType;
