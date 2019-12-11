@@ -15,7 +15,7 @@ bool read_descriptors_text_file(std::string filename, std::vector<std::pair<Poin
 
 typedef Point::Scalar Scalar;
 typedef Point::VectorType VectorType;
-void write_complete_profiles(int nb_points, int nb_samples, Scalar min_scale, Scalar max_scale, Scalar base, std::vector<std::pair<Point, std::vector<std::tuple<Scalar, VectorType, Scalar, Scalar>>>>& points_gls_descriptors_over_scales, std::string output_filename);
+void write_complete_profiles(int nb_points, int nb_samples, Scalar min_scale, Scalar max_scale, Scalar base, std::vector<std::pair<Point, std::vector<std::tuple<Scalar, VectorType, Scalar, Scalar>>>>& points_gls_descriptors_over_scales, std::string output_filename, std::vector<std::pair<Point, std::vector<Scalar>>>* geom_var_ptr = nullptr);
 
 typedef Point::Scalar Scalar;
 typedef Point::VectorType VectorType;

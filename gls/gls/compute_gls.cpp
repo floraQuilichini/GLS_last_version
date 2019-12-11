@@ -130,7 +130,49 @@ int main(int argc, char** argv)
 	Scalar min_scale, max_scale, abs_scale, base;
 	int nb_samples;
 	bool flag_multiscale;
+	bool flag_compute_geometric_variation = false;
 
+	switch (argc)
+	{
+	case 8:
+		flag_multiscale = true;
+		pc_filename = argv[1];
+		pc_down_filename = argv[2];
+		min_scale = std::stod(argv[3]);
+		max_scale = std::stod(argv[4]);
+		nb_samples = std::stoi(argv[5]);
+		output_filename = argv[6];
+		flag_compute_geometric_variation = (std::stoi(argv[7]) > 0);
+		break;
+	case 7:
+		flag_multiscale = true;
+		pc_filename = argv[1];
+		pc_down_filename = argv[2];
+		min_scale = std::stod(argv[3]);
+		max_scale = std::stod(argv[4]);
+		nb_samples = std::stoi(argv[5]);
+		output_filename = argv[6];
+		break;
+	case 6:
+		flag_multiscale = false;
+		pc_filename = argv[1];
+		pc_down_filename = argv[2];
+		min_scale = std::stod(argv[3]);
+		output_filename = argv[4];
+		max_scale = min_scale;
+		nb_samples = 1;
+		flag_compute_geometric_variation = (std::stoi(argv[7]) > 0);
+		break;
+	default:
+		flag_multiscale = false;
+		pc_filename = argv[1];
+		pc_down_filename = argv[2];
+		min_scale = std::stod(argv[3]);
+		output_filename = argv[4];
+		max_scale = min_scale;
+		nb_samples = 1;
+	}
+/*
 	if (argc == 7)
 	{
 		flag_multiscale = true;
@@ -151,6 +193,7 @@ int main(int argc, char** argv)
 		max_scale = min_scale;
 		nb_samples = 1;
 	}
+*/
 
 	std::cout << "Input file:  " << pc_filename << std::endl;
 
@@ -168,6 +211,7 @@ int main(int argc, char** argv)
 	DFit1 dfit1;
 
 	std::vector<std::pair<Point, std::vector<std::tuple<Scalar, VectorType, Scalar, Scalar>>>> points_gls_descriptors_over_scales;
+	std::vector<std::pair<Point, std::vector<Scalar>>> points_geometric_variation_over_scales;
 
 	if (flag_multiscale)
 		base = pow(max_scale / min_scale, 1.0 / ((Scalar)nb_samples - 1.0));
@@ -178,21 +222,31 @@ int main(int argc, char** argv)
 	{
 		Point p = pointCloud_down[j];
 		std::vector<std::tuple<Scalar, VectorType, Scalar, Scalar>> point_gls_descriptors_over_scales;
+		std::vector<Scalar> point_geometric_variation_over_scales;
 		for (int i = 0; i < nb_samples; i++)
 		{
 			abs_scale = min_scale*pow(base, i);
 			std::tuple<Scalar, VectorType, Scalar, Scalar> gls_params = compute_gls_descriptor(fit1, pointCloud, abs_scale, p);
 			point_gls_descriptors_over_scales.push_back(gls_params);
 
-			Scalar geom_var = compute_geometric_variation(dfit1, pointCloud, abs_scale, p, Eigen::Vector3d::Ones());
-			std::cout << "geometric variation : " << geom_var << std::endl;
+			if (flag_compute_geometric_variation)
+			{
+				Scalar geom_var = compute_geometric_variation(dfit1, pointCloud, abs_scale, p, Eigen::Vector3d::Ones());
+				point_geometric_variation_over_scales.push_back(geom_var);
+				//std::cout << "geometric variation : " << geom_var << std::endl;
+			}
 		}
 		points_gls_descriptors_over_scales.push_back(std::make_pair(p, point_gls_descriptors_over_scales));
+		if (flag_compute_geometric_variation)
+			points_geometric_variation_over_scales.push_back(std::make_pair(p, point_geometric_variation_over_scales));
 	}
 
 	// write output file
 	int nb_points = pointCloud_down.size();
-	write_complete_profiles(nb_points, nb_samples, min_scale, max_scale, base, points_gls_descriptors_over_scales, output_filename);
+	if (flag_compute_geometric_variation)
+		write_complete_profiles(nb_points, nb_samples, min_scale, max_scale, base, points_gls_descriptors_over_scales, output_filename, &points_geometric_variation_over_scales);
+	else
+		write_complete_profiles(nb_points, nb_samples, min_scale, max_scale, base, points_gls_descriptors_over_scales, output_filename);
 
 	return 0;
 

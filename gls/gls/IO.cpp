@@ -160,7 +160,7 @@ bool read_descriptors_text_file(std::string filename, std::vector<std::pair<Poin
 
 
 
-void write_complete_profiles(int nb_points, int nb_samples, Scalar min_scale, Scalar max_scale, Scalar base, std::vector<std::pair<Point, std::vector<std::tuple<Scalar, VectorType, Scalar, Scalar>>>>& points_gls_descriptors_over_scales, std::string output_filename)
+void write_complete_profiles(int nb_points, int nb_samples, Scalar min_scale, Scalar max_scale, Scalar base, std::vector<std::pair<Point, std::vector<std::tuple<Scalar, VectorType, Scalar, Scalar>>>>& points_gls_descriptors_over_scales, std::string output_filename, std::vector<std::pair<Point, std::vector<Scalar>>>* geom_var_ptr)
 {
 
 	std::ofstream output_file;
@@ -171,14 +171,35 @@ void write_complete_profiles(int nb_points, int nb_samples, Scalar min_scale, Sc
 	output_file << base << std::endl;
 	output_file << nb_samples << std::endl;
 	output_file << nb_points << std::endl;
-	// Point-descriptor over scales
-	for (int i = 0; i < nb_points; i++)
+
+	if (geom_var_ptr)
 	{
-		Point point = (points_gls_descriptors_over_scales[i]).first;
-		output_file << (point.pos()).transpose() << " " << (point.normal()).transpose() << std::endl;
-		std::vector<std::tuple<Scalar, VectorType, Scalar, Scalar>> descriptors_over_scales = (points_gls_descriptors_over_scales[i]).second;
-		for (int j = 0; j < nb_samples; j++)
-			output_file << std::get<0>(descriptors_over_scales[j]) << " " << std::get<2>(descriptors_over_scales[j]) << " " << std::get<3>(descriptors_over_scales[j]) << std::endl;
+		// create iterator
+		std::vector<std::pair<Point, std::vector<Scalar>>>::iterator it = geom_var_ptr->begin();
+		// Point-descriptor over scales
+		for (int i = 0; i < nb_points; i++)
+		{
+			Point point = (points_gls_descriptors_over_scales[i]).first;
+			output_file << (point.pos()).transpose() << " " << (point.normal()).transpose() << std::endl;
+			std::vector<std::tuple<Scalar, VectorType, Scalar, Scalar>> descriptors_over_scales = (points_gls_descriptors_over_scales[i]).second;
+			for (int j = 0; j < nb_samples; j++)
+				output_file << std::get<0>(descriptors_over_scales[j]) << " " << std::get<2>(descriptors_over_scales[j]) << " " << std::get<3>(descriptors_over_scales[j]) <<  " " << it->second[j] <<  std::endl;
+
+			it++;
+		}
+		
+	}
+	else
+	{
+		// Point-descriptor over scales
+		for (int i = 0; i < nb_points; i++)
+		{
+			Point point = (points_gls_descriptors_over_scales[i]).first;
+			output_file << (point.pos()).transpose() << " " << (point.normal()).transpose() << std::endl;
+			std::vector<std::tuple<Scalar, VectorType, Scalar, Scalar>> descriptors_over_scales = (points_gls_descriptors_over_scales[i]).second;
+			for (int j = 0; j < nb_samples; j++)
+				output_file << std::get<0>(descriptors_over_scales[j]) << " " << std::get<2>(descriptors_over_scales[j]) << " " << std::get<3>(descriptors_over_scales[j]) << std::endl;
+		}
 	}
 	output_file.close();
 }
