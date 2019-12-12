@@ -154,11 +154,26 @@ Scalar RansacScheme::normalErr(Eigen::Matrix4d transform, std::vector<std::pair<
 	return err / (Scalar)nb_pairs;
 }
 
-bool RansacScheme::is_q_unique(triplet t, std::tuple<Point, Point, Scalar, Scalar> q)
+bool RansacScheme::is_q_unique(RansacScheme::triplet t, std::tuple<Point, Point, Scalar, Scalar> q)
 {
 	if (std::get<0>(t.pair1) == std::get<0>(q))
 		return false;
 	if (std::get<1>(t.pair1) == std::get<1>(q))
 		return false;
 	return true;
+}
+
+
+bool RansacScheme::is_valid(std::tuple<Point, Point, Scalar, Scalar> q, RansacScheme::triplet t, std::vector<std::pair<Point, Point>>& pairs_source_target, Scalar max_err_reg, Scalar max_err_norm)
+{
+	if (!is_q_unique(t, q))
+		return false;
+	Eigen::Matrix4d transform = compute_rigid_transform(t, q);
+	Scalar reg_err = registrationErr(transform, pairs_source_target);
+	Scalar norm_err = normalErr(transform, pairs_source_target);
+	if (!(reg_err < max_err_reg && norm_err < max_err_norm))
+		return false;
+	else
+		return true;
+
 }
