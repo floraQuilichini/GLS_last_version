@@ -27,4 +27,5 @@ public:
 	Scalar registrationErr(Eigen::Matrix4d transform, std::vector<std::pair<Point, Point>>& pairs_source_target);
 	Scalar compute_angle(VectorType v1, VectorType v2);
 	Scalar normalErr(Eigen::Matrix4d transform, std::vector<std::pair<Point, Point>>& pairs_source_target);
+	bool is_q_unique(triplet t, std::tuple<Point, Point, Scalar, Scalar> q);
 };

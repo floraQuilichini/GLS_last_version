@@ -18,6 +18,11 @@ public:
 	MULTIARCH inline VectorType& pos() { return m_pos; }
 	MULTIARCH inline const VectorType& normal()    const { return m_normal; }
 	MULTIARCH inline VectorType& normal() { return m_normal; }
+	bool inline operator==(const Point& p)
+	{
+		return (this->pos().x() == p.pos().x()) && (this->pos().x() == p.pos().x()) && (this->pos().x() == p.pos().x());
+	}
+	
 
 private:
 	VectorType m_pos, m_normal;

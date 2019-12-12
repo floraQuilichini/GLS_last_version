@@ -38,12 +38,12 @@ Scalar RansacScheme::scaleDiff(RansacScheme::triplet t)
 Eigen::Matrix4d RansacScheme::compute_rigid_transform(RansacScheme::triplet t)
 {
 	// points 
-	VectorType source_pos1 = std::get<0>(t.pair1).pos();
-	VectorType target_pos1 = std::get<1>(t.pair1).pos();
-	VectorType source_pos2 = std::get<0>(t.pair2).pos();
-	VectorType target_pos2 = std::get<1>(t.pair2).pos();
-	VectorType source_pos3 = std::get<0>(t.pair3).pos();
+	VectorType target_pos1 = std::get<0>(t.pair1).pos();
+	VectorType source_pos1 = std::get<1>(t.pair1).pos();
+	VectorType target_pos2 = std::get<0>(t.pair2).pos();
+	VectorType source_pos2 = std::get<1>(t.pair2).pos();
 	VectorType target_pos3 = std::get<0>(t.pair3).pos();
+	VectorType source_pos3 = std::get<0>(t.pair3).pos();
 
 	// target and source data
 	Eigen::Matrix3d source_data, target_data;
@@ -116,4 +116,13 @@ Scalar RansacScheme::normalErr(Eigen::Matrix4d transform, std::vector<std::pair<
 		err += compute_angle(Eigen::Map<Eigen::MatrixXd>(pairs_source_target[k].first.normal().data(), 3, 1) ,  R*Eigen::Map<Eigen::MatrixXd>(pairs_source_target[k].second.normal().data(), 3, 1));
 
 	return err / (Scalar)nb_pairs;
+}
+
+bool RansacScheme::is_q_unique(triplet t, std::tuple<Point, Point, Scalar, Scalar> q)
+{
+	if (std::get<0>(t.pair1) == std::get<0>(q))
+		return false;
+	if (std::get<1>(t.pair1) == std::get<1>(q))
+		return false;
+	return true;
 }
