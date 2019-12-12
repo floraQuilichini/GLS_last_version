@@ -87,6 +87,42 @@ Eigen::Matrix4d RansacScheme::compute_rigid_transform(RansacScheme::triplet t)
 }
 
 
+/* not sure this is the proper way to solve registration problem for affine transformation with 4 matching points. 
+The method used (by solving a linear system) returns a 4-by-4 matrix (with coefficients for rotation, translation and scaling) but solves the 12 unknown as if they were decorrelated 
+In fact, it is not quite the case. Some of the terms of the matrix are related to each other and we have only 10 unknowns [1 theta, 3 rot axis, 3 translation, 3 scaling ](and not 12)*/
+Eigen::Matrix4d RansacScheme::compute_rigid_transform(RansacScheme::triplet t, std::tuple<Point, Point, Scalar, Scalar> q)
+{
+	// 4 pairs of points 
+	VectorType target_pos1 = std::get<0>(t.pair1).pos();
+	VectorType source_pos1 = std::get<1>(t.pair1).pos();
+	VectorType target_pos2 = std::get<0>(t.pair2).pos();
+	VectorType source_pos2 = std::get<1>(t.pair2).pos();
+	VectorType target_pos3 = std::get<0>(t.pair3).pos();
+	VectorType source_pos3 = std::get<1>(t.pair3).pos();
+	VectorType target_q_pos = std::get<0>(q).pos();
+	VectorType source_q_pos = std::get<1>(q).pos();
+
+	// target and source data
+	Eigen::Matrix4d source_data = Eigen::Matrix4d::Ones(4, 4);
+	Eigen::Matrix4d target_data = Eigen::Matrix4d::Ones(4, 4);
+	source_data.block(0, 0, 3, 1) = Eigen::Map<Eigen::ArrayXd>(source_pos1.data(), 3);
+	source_data.block(0, 1, 3, 1) = Eigen::Map<Eigen::ArrayXd>(source_pos2.data(), 3);
+	source_data.block(0, 2, 3, 1) = Eigen::Map<Eigen::ArrayXd>(source_pos3.data(), 3);
+	source_data.block(0, 3, 3, 1) = Eigen::Map<Eigen::ArrayXd>(source_q_pos.data(), 3);
+
+	target_data.block(0, 0, 3, 1) = Eigen::Map<Eigen::ArrayXd>(target_pos1.data(), 3);
+	target_data.block(0, 1, 3, 1) = Eigen::Map<Eigen::ArrayXd>(target_pos2.data(), 3);
+	target_data.block(0, 2, 3, 1) = Eigen::Map<Eigen::ArrayXd>(target_pos3.data(), 3);
+	target_data.block(0, 3, 3, 1) = Eigen::Map<Eigen::ArrayXd>(target_q_pos.data(), 3);
+
+	// solve linear system 
+	Eigen::Matrix4d transform = target_data.colPivHouseholderQr().solve(source_data);
+
+	return transform;
+}
+
+
+
 Scalar RansacScheme::registrationErr(Eigen::Matrix4d transform, std::vector<std::pair<Point, Point>>& pairs_source_target)
 {
 	Scalar err = 0.0;
