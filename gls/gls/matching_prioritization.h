@@ -27,6 +27,7 @@ public:
 	pair_priority_queue(const std::vector<std::tuple<Point, Point, Scalar, Scalar>>& vector_pair);
 	void add_pair(const std::tuple<Point, Point, Scalar, Scalar>& pair);
 	void empty_queue();
+	std::priority_queue<std::tuple<Point, Point, Scalar, Scalar>, std::vector<std::tuple<Point, Point, Scalar, Scalar>>, mycomparison>* get_queue_ptr();
 };
 
 typedef Point::Scalar Scalar;

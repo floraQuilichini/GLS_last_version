@@ -18,8 +18,8 @@ mycomparison::mycomparison(const bool& revparam)
 
 bool mycomparison::operator()(const std::tuple<Point, Point, Scalar, Scalar>& t1, const std::tuple<Point, Point, Scalar, Scalar>& t2) const
 {
-	if (reverse) return (std::get<3>(t1)>std::get<3>(t2));
-	else return (std::get<3>(t1)<std::get<3>(t2));
+	if (reverse) return (std::get<3>(t1)<std::get<3>(t2));
+	else return (std::get<3>(t1)>std::get<3>(t2));
 }
 
 
@@ -45,6 +45,11 @@ void pair_priority_queue::empty_queue()
 	{
 		queue_.pop();
 	}
+}
+
+std::priority_queue<std::tuple<Point, Point, Scalar, Scalar>, std::vector<std::tuple<Point, Point, Scalar, Scalar>>, mycomparison>* pair_priority_queue::get_queue_ptr()
+{
+	return (&queue_);
 }
 
 std::pair<Point, Scalar> compute_point_priority(std::map<Point, std::vector<Scalar>, PointComp>::iterator point_geom_var, int nb_samples, Scalar alpha)
