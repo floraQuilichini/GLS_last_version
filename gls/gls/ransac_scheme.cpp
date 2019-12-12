@@ -98,3 +98,22 @@ Scalar RansacScheme::registrationErr(Eigen::Matrix4d transform, std::vector<std:
 	
 	return err / (Scalar)nb_pairs;
 }
+
+Scalar RansacScheme::compute_angle(VectorType v1, VectorType v2)
+{
+	Scalar dot_product = v1.dot(v2);
+	Scalar norm_v1 = v1.norm();
+	Scalar norm_v2 = v2.norm();
+	return acos(dot_product / (norm_v1*norm_v2)); // en radians
+}
+
+Scalar RansacScheme::normalErr(Eigen::Matrix4d transform, std::vector<std::pair<Point, Point>>& pairs_source_target)
+{
+	Scalar err = 0.0;
+	int nb_pairs = pairs_source_target.size();
+	Eigen::Matrix3d R = transform.block(0, 0, 3, 3);
+	for (int k = 0; k < nb_pairs; k++)
+		err += compute_angle(Eigen::Map<Eigen::MatrixXd>(pairs_source_target[k].first.normal().data(), 3, 1) ,  R*Eigen::Map<Eigen::MatrixXd>(pairs_source_target[k].second.normal().data(), 3, 1));
+
+	return err / (Scalar)nb_pairs;
+}

@@ -25,5 +25,6 @@ public:
 	Scalar scaleDiff(triplet t);
 	Eigen::Matrix4d compute_rigid_transform(triplet);
 	Scalar registrationErr(Eigen::Matrix4d transform, std::vector<std::pair<Point, Point>>& pairs_source_target);
-
+	Scalar compute_angle(VectorType v1, VectorType v2);
+	Scalar normalErr(Eigen::Matrix4d transform, std::vector<std::pair<Point, Point>>& pairs_source_target);
 };
