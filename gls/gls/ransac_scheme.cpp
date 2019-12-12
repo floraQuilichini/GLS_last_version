@@ -5,6 +5,7 @@
 #include <vector>
 #include <tuple>
 #include <string>
+#include <iterator>
 #include "Patate/grenaille.h"
 #include "Eigen/Eigen"
 #include "ransac_scheme.h"
@@ -26,11 +27,11 @@ RansacScheme::triplet RansacScheme::pop_triplet()
 	return triplet;
 }
 
-Scalar RansacScheme::scaleDiff(RansacScheme::triplet t)
+std::pair<Scalar, Scalar> RansacScheme::scaleDiff(RansacScheme::triplet t)
 {
 	Scalar avgScale = (std::get<2>(t.pair1) + std::get<2>(t.pair2) + std::get<2>(t.pair3)) / 3.0;
 	Scalar varScale = (abs(std::get<2>(t.pair1) - avgScale) + abs(std::get<2>(t.pair2) - avgScale) + abs(std::get<2>(t.pair3) - avgScale)) / 3.0;
-	return varScale;
+	return std::make_pair(varScale, avgScale);
 }
 
 
@@ -176,4 +177,43 @@ bool RansacScheme::is_valid(std::tuple<Point, Point, Scalar, Scalar> q, RansacSc
 	else
 		return true;
 
+}
+
+
+void RansacScheme::rescale_data(std::vector<std::pair<Point, Point>>& pairs_source_target, Scalar avgScale)
+{
+	for (int k = 0; k < pairs_source_target.size(); k++)
+		pairs_source_target[k].second.pos() *= avgScale;
+}
+
+
+Eigen::Matrix4d RansacScheme::ransac_algorithm(int nb_iterations, Scalar max_err_scale, Scalar max_err_reg, Scalar max_err_norm, std::vector<std::pair<Point, Point>>& pairs_source_target)
+{
+	int counter = 0;
+	while (counter < nb_iterations)
+	{
+		triplet t = pop_triplet();
+		Scalar err_scale = scaleDiff(t).first;
+		if (err_scale < max_err_scale)
+		{
+			Scalar avgScale = scaleDiff(t).second;
+			rescale_data(pairs_source_target, avgScale);
+			Eigen::Matrix4d M = compute_rigid_transform(t);
+			
+			if (registrationErr(M, pairs_source_target) < max_err_reg && normalErr(M, pairs_source_target) < max_err_norm)
+			{
+				queue_copy_ = *queue_ptr_;
+				while (!queue_copy_.empty())
+				{
+					std::tuple<Point, Point, Scalar, Scalar> q = queue_copy_.top();
+					queue_copy_.pop();
+					if (is_valid(q, t, pairs_source_target, max_err_reg, max_err_norm))
+						return compute_rigid_transform(t, q);
+				}
+			}
+
+		}
+		counter += 1;
+	}
+	return Eigen::Matrix4d::Identity();
 }

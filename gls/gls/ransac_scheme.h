@@ -22,7 +22,7 @@ public:
 		std::tuple<Point, Point, Scalar, Scalar> pair3;
 	};
 	triplet pop_triplet();
-	Scalar scaleDiff(triplet t);
+	std::pair<Scalar, Scalar> scaleDiff(triplet t);
 	Eigen::Matrix4d compute_rigid_transform(triplet);
 	Eigen::Matrix4d compute_rigid_transform(triplet, std::tuple<Point, Point, Scalar, Scalar> q);
 	Scalar registrationErr(Eigen::Matrix4d transform, std::vector<std::pair<Point, Point>>& pairs_source_target);
@@ -30,4 +30,6 @@ public:
 	Scalar normalErr(Eigen::Matrix4d transform, std::vector<std::pair<Point, Point>>& pairs_source_target);
 	bool is_q_unique(triplet t, std::tuple<Point, Point, Scalar, Scalar> q);
 	bool is_valid(std::tuple<Point, Point, Scalar, Scalar> q, triplet t, std::vector<std::pair<Point, Point>>& pairs_source_target, Scalar max_err_reg, Scalar max_err_norm);
+	void rescale_data(std::vector<std::pair<Point, Point>>& pairs_source_target, Scalar avgScale);
+	Eigen::Matrix4d ransac_algorithm(int nb_iterations, Scalar max_err_scale, Scalar max_err_reg, Scalar max_err_norm, std::vector<std::pair<Point, Point>>& pairs_source_target);
 };
