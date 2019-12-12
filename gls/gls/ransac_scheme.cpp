@@ -85,3 +85,16 @@ Eigen::Matrix4d RansacScheme::compute_rigid_transform(RansacScheme::triplet t)
 
 	return transform;
 }
+
+
+Scalar RansacScheme::registrationErr(Eigen::Matrix4d transform, std::vector<std::pair<Point, Point>>& pairs_source_target)
+{
+	Scalar err = 0.0;
+	int nb_pairs = pairs_source_target.size();
+	Eigen::Matrix3d R = transform.block(0, 0, 3, 3);
+	Eigen::Vector3d T = transform.block(0, 3, 3, 1);
+	for (int k = 0; k < nb_pairs; k++)
+		err += ((Eigen::Map<Eigen::MatrixXd>(pairs_source_target[k].first.pos().data(),3, 1) -R*Eigen::Map<Eigen::MatrixXd>(pairs_source_target[k].second.pos().data(), 3, 1) - T).cwiseAbs()).sum();
+	
+	return err / (Scalar)nb_pairs;
+}

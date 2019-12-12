@@ -24,4 +24,6 @@ public:
 	triplet pop_triplet();
 	Scalar scaleDiff(triplet t);
 	Eigen::Matrix4d compute_rigid_transform(triplet);
+	Scalar registrationErr(Eigen::Matrix4d transform, std::vector<std::pair<Point, Point>>& pairs_source_target);
+
 };
