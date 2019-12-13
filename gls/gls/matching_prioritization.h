@@ -34,4 +34,10 @@ typedef Point::Scalar Scalar;
 std::pair<Point, Scalar> compute_point_priority(std::map<Point, std::vector<Scalar>, PointComp>::iterator point_geom_var, int nb_samples, Scalar alpha);
 
 typedef Point::Scalar Scalar;
+Scalar compute_point_priority(std::vector<Scalar>& point_geom_var, int nb_samples, Scalar alpha);
+
+typedef Point::Scalar Scalar;
 std::tuple<Point, Point, Scalar> compute_pair_cost(std::map<Point, std::vector<Scalar>, PointComp>::iterator source_geom_var, std::map<Point, std::vector<Scalar>, PointComp>::iterator target_geom_var, int nb_samples, Scalar alpha);
+
+typedef Point::Scalar Scalar;
+Scalar compute_pair_cost(std::vector<Scalar>& source_geom_var, std::vector<Scalar>& target_geom_var, int nb_samples, Scalar alpha);

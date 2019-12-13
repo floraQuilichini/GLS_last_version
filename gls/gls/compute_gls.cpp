@@ -18,6 +18,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include "base.h"
 #include"IO.h"
 #include "matching_prioritization.h"
+#include "ransac_scheme.h"
 #include <vector>
 #include <tuple>
 #include <fstream>
@@ -116,7 +117,7 @@ Scalar  compute_geometric_variation(DFit& _fit, vector<Point>& pointCloud, Scala
 }
 
 
-/*
+
 int main(int argc, char** argv)
 {
 
@@ -230,9 +231,9 @@ int main(int argc, char** argv)
 	return 0;
 
 }
-*/
 
 
+/*
 int main(int argc, char** argv)
 {
 
@@ -307,7 +308,7 @@ int main(int argc, char** argv)
 	return 0;
 
 }
-
+*/
 
 
 /*
@@ -347,3 +348,49 @@ int main(int argc, char** argv)
 }
 */
 
+/*
+int main(int argc, char** argv)
+{
+
+	if (argc < 4)
+	{
+		std::cout << "you must enter at least 3 arguments : the source descriptors file, the target descriptors file and the output file " << std::endl;
+		return EXIT_FAILURE;
+	}
+
+	std::string descriptors_source_filename, descriptors_target_filename, output_filename;
+	Scalar min_scale, max_scale, base;
+	int nb_samples, nb_source_points, nb_target_points;
+
+	descriptors_source_filename = argv[1];
+	descriptors_target_filename = argv[2];
+	output_filename = argv[3];
+	Scalar alpha = 1.0;
+
+	// get descriptors and headers 
+	std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>> source_descriptors_geom_var, target_descriptors_geom_var;
+	read_descriptors_text_file(descriptors_source_filename, source_descriptors_geom_var, nb_source_points, nb_samples, min_scale, max_scale, base);
+	read_descriptors_text_file(descriptors_target_filename, target_descriptors_geom_var, nb_target_points, nb_samples, min_scale, max_scale, base);
+	
+	
+	// compute matching pairs with priority
+	VectorType w = Eigen::Vector3d::Ones();
+	Scalar ratio = 0.1;
+	std::vector<std::tuple<Point, Point, Scalar, Scalar>> three_closest_pairs = compute_3_closest_pairs(source_descriptors_geom_var, target_descriptors_geom_var, ratio, nb_samples, w);
+
+
+	// apply Ransac scheme
+	int nb_iterations = 1000;
+	Scalar max_err_scale = 0.05;
+	Scalar max_err_reg = 0.05;
+	Scalar max_err_norm = 0.05;
+	pair_priority_queue queue(three_closest_pairs);
+	RansacScheme ransac(queue);
+	Eigen::Matrix4d transform = ransac.ransac_algorithm(nb_iterations, max_err_scale, max_err_reg, max_err_norm, three_closest_pairs);
+
+	std::cout << "transform : " << transform << std::endl;
+
+	return 0;
+
+}
+*/

@@ -182,6 +182,69 @@ bool read_descriptors_text_file(std::string filename, std::vector<std::pair<Poin
 
 
 
+bool read_descriptors_text_file(std::string filename, std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>& gls_profiles_geom_var, int& nb_points, int& nb_samples, Scalar& min_scale, Scalar& max_scale, Scalar& base)
+{
+	std::string file_ext = extract_ext(filename);
+	if (file_ext.compare("txt") == 0)
+	{
+		// read text file
+		std::ifstream file;
+		file.open(filename);
+
+		if (!file)
+		{
+			std::cerr << "File " << filename << " could not be opened" << std::endl;
+			return false;
+		}
+
+		// get header
+		std::string header_line;
+		getline(file, header_line);
+		min_scale = std::atof(header_line.c_str());
+		getline(file, header_line);
+		max_scale = std::atof(header_line.c_str());
+		getline(file, header_line);
+		base = std::atof(header_line.c_str());
+		getline(file, header_line);
+		nb_samples = std::atoi(header_line.c_str());
+		getline(file, header_line);
+		nb_points = std::atoi(header_line.c_str());
+
+		// get points and descriptors
+		Scalar x, y, z, nx, ny, nz;
+		Scalar tau, kappa, phi, geom_var;
+		int counter1 = 0;
+
+		while (counter1 < nb_points)
+		{
+			file >> x >> y >> z >> nx >> ny >> nz;
+
+			int counter2 = 0;
+			std::vector<std::tuple<Scalar, Scalar, Scalar>> scale_profiles;
+			std::vector<Scalar> geom_variations;
+			while (counter2 < nb_samples)
+			{
+				file >> tau >> kappa >> phi >> geom_var;
+				scale_profiles.push_back(std::make_tuple(tau, kappa, phi));
+				geom_variations.push_back(geom_var);
+				counter2 = counter2 + 1;
+			}
+
+			gls_profiles_geom_var.push_back(std::make_tuple(Point({ x, y, z }, { nx, ny, nz }), scale_profiles, geom_variations));
+			counter1 = counter1 + 1;
+		}
+	
+
+		file.close();
+		return true;
+	}
+
+	else
+	{
+		// not implemented yet for other types of files
+		return false;
+	}
+}
 
 
 

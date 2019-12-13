@@ -124,14 +124,14 @@ Eigen::Matrix4d RansacScheme::compute_rigid_transform(RansacScheme::triplet t, s
 
 
 
-Scalar RansacScheme::registrationErr(Eigen::Matrix4d transform, std::vector<std::pair<Point, Point>>& pairs_source_target)
+Scalar RansacScheme::registrationErr(Eigen::Matrix4d transform, std::vector<std::tuple<Point, Point, Scalar, Scalar>>& pairs_source_target)
 {
 	Scalar err = 0.0;
 	int nb_pairs = pairs_source_target.size();
 	Eigen::Matrix3d R = transform.block(0, 0, 3, 3);
 	Eigen::Vector3d T = transform.block(0, 3, 3, 1);
 	for (int k = 0; k < nb_pairs; k++)
-		err += ((Eigen::Map<Eigen::MatrixXd>(pairs_source_target[k].first.pos().data(),3, 1) -R*Eigen::Map<Eigen::MatrixXd>(pairs_source_target[k].second.pos().data(), 3, 1) - T).cwiseAbs()).sum();
+		err += ((Eigen::Map<Eigen::MatrixXd>(std::get<0>(pairs_source_target[k]).pos().data(),3, 1) -R*Eigen::Map<Eigen::MatrixXd>(std::get<1>(pairs_source_target[k]).pos().data(), 3, 1) - T).cwiseAbs()).sum();
 	
 	return err / (Scalar)nb_pairs;
 }
@@ -144,13 +144,13 @@ Scalar RansacScheme::compute_angle(VectorType v1, VectorType v2)
 	return acos(dot_product / (norm_v1*norm_v2)); // en radians
 }
 
-Scalar RansacScheme::normalErr(Eigen::Matrix4d transform, std::vector<std::pair<Point, Point>>& pairs_source_target)
+Scalar RansacScheme::normalErr(Eigen::Matrix4d transform, std::vector<std::tuple<Point, Point, Scalar, Scalar>>& pairs_source_target)
 {
 	Scalar err = 0.0;
 	int nb_pairs = pairs_source_target.size();
 	Eigen::Matrix3d R = transform.block(0, 0, 3, 3);
 	for (int k = 0; k < nb_pairs; k++)
-		err += compute_angle(Eigen::Map<Eigen::MatrixXd>(pairs_source_target[k].first.normal().data(), 3, 1) ,  R*Eigen::Map<Eigen::MatrixXd>(pairs_source_target[k].second.normal().data(), 3, 1));
+		err += compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<0>(pairs_source_target[k]).normal().data(), 3, 1) ,  R*Eigen::Map<Eigen::MatrixXd>(std::get<1>(pairs_source_target[k]).normal().data(), 3, 1));
 
 	return err / (Scalar)nb_pairs;
 }
@@ -165,7 +165,7 @@ bool RansacScheme::is_q_unique(RansacScheme::triplet t, std::tuple<Point, Point,
 }
 
 
-bool RansacScheme::is_valid(std::tuple<Point, Point, Scalar, Scalar> q, RansacScheme::triplet t, std::vector<std::pair<Point, Point>>& pairs_source_target, Scalar max_err_reg, Scalar max_err_norm)
+bool RansacScheme::is_valid(std::tuple<Point, Point, Scalar, Scalar> q, RansacScheme::triplet t, std::vector<std::tuple<Point, Point, Scalar, Scalar>>& pairs_source_target, Scalar max_err_reg, Scalar max_err_norm)
 {
 	if (!is_q_unique(t, q))
 		return false;
@@ -180,14 +180,14 @@ bool RansacScheme::is_valid(std::tuple<Point, Point, Scalar, Scalar> q, RansacSc
 }
 
 
-void RansacScheme::rescale_data(std::vector<std::pair<Point, Point>>& pairs_source_target, Scalar avgScale)
+void RansacScheme::rescale_data(std::vector<std::tuple<Point, Point, Scalar, Scalar>>& pairs_source_target, Scalar avgScale)
 {
 	for (int k = 0; k < pairs_source_target.size(); k++)
-		pairs_source_target[k].second.pos() *= avgScale;
+		std::get<1>(pairs_source_target[k]).pos() *= avgScale;
 }
 
 
-Eigen::Matrix4d RansacScheme::ransac_algorithm(int nb_iterations, Scalar max_err_scale, Scalar max_err_reg, Scalar max_err_norm, std::vector<std::pair<Point, Point>>& pairs_source_target)
+Eigen::Matrix4d RansacScheme::ransac_algorithm(int nb_iterations, Scalar max_err_scale, Scalar max_err_reg, Scalar max_err_norm, std::vector<std::tuple<Point, Point, Scalar, Scalar>>& pairs_source_target)
 {
 	int counter = 0;
 	while (counter < nb_iterations)
