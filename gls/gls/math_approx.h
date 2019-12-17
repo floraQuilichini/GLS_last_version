@@ -15,6 +15,6 @@ private:
 	std::vector<Scalar> lookup_table_;
 public :
 	tanh_lookup_table(Scalar min_abscisse, Scalar max_abscisse, int nb_samples);
-	void read_lookup_table(std::vector<Scalar>& abscisses, std::vector<Scalar>& tanh_values);
+	void read_lookup_table(const Eigen::ArrayXd& abscisses, Eigen::ArrayXd& tanh_values);
 
 };

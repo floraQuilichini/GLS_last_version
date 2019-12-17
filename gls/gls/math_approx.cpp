@@ -19,25 +19,25 @@
 }
 
 
- void tanh_lookup_table::read_lookup_table(std::vector<Scalar>& abscisses, std::vector<Scalar>& tanh_values)
+ void tanh_lookup_table::read_lookup_table(const Eigen::ArrayXd& abscisses, Eigen::ArrayXd& tanh_values)
  {
-	 size_t size_vec = abscisses.size();
-	 tanh_values.reserve(size_vec);
+	 size_t size_vec = abscisses.rows();
+	 tanh_values = Eigen::ArrayXd(size_vec, 1);
 
 	 // convert abscisse values to int
 	 for (int i = 0; i < size_vec; i++)
 	 {
-		 Scalar value = abscisses[i];
+		 Scalar value = abscisses(0, i);
 		 if (value < min_abscisse_)
-			 tanh_values[i] = -1;
+			 tanh_values(i) = -1;
 		 else
 		 {
 			 if (value > max_abscisse_)
-				 tanh_values[i] = 1;
+				 tanh_values(i) = 1;
 			 else
 			 {
-				 int corresponding_int = round((value - min_abscisse_) / step_);
-				 tanh_values[i] = corresponding_int;
+				 int corresponding_int = (int)((value - min_abscisse_) / step_);
+				 tanh_values(i) = lookup_table_[corresponding_int];
 			 }
 		 }
 	}
