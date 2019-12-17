@@ -6,7 +6,7 @@
 #include <queue>
 #include "base.h"
 
-typedef Point::Scalar Scalar;
+
 class mycomparison
 {
 	bool reverse;
@@ -15,7 +15,7 @@ public:
 	bool operator() (const std::tuple<Point, Point, Scalar, Scalar>& t1, const std::tuple<Point, Point, Scalar, Scalar>& t2) const;
 };
 
-typedef Point::Scalar Scalar;
+
 class pair_priority_queue
 {
 private:
@@ -30,14 +30,14 @@ public:
 	std::priority_queue<std::tuple<Point, Point, Scalar, Scalar>, std::vector<std::tuple<Point, Point, Scalar, Scalar>>, mycomparison>* get_queue_ptr();
 };
 
-typedef Point::Scalar Scalar;
-std::pair<Point, Scalar> compute_point_priority(std::map<Point, std::vector<Scalar>, PointComp>::iterator point_geom_var, int nb_samples, Scalar alpha);
 
-typedef Point::Scalar Scalar;
+std::pair<Point, Scalar> compute_point_priority(std::map<Point, std::vector<Scalar>>::iterator point_geom_var, int nb_samples, Scalar alpha);
+
+
 Scalar compute_point_priority(std::vector<Scalar>& point_geom_var, int nb_samples, Scalar alpha);
 
-typedef Point::Scalar Scalar;
-std::tuple<Point, Point, Scalar> compute_pair_cost(std::map<Point, std::vector<Scalar>, PointComp>::iterator source_geom_var, std::map<Point, std::vector<Scalar>, PointComp>::iterator target_geom_var, int nb_samples, Scalar alpha);
 
-typedef Point::Scalar Scalar;
+std::tuple<Point, Point, Scalar> compute_pair_cost(std::map<Point, std::vector<Scalar>>::iterator source_geom_var, std::map<Point, std::vector<Scalar>>::iterator target_geom_var, int nb_samples, Scalar alpha);
+
+
 Scalar compute_pair_cost(std::vector<Scalar>& source_geom_var, std::vector<Scalar>& target_geom_var, int nb_samples, Scalar alpha);

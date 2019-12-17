@@ -1,7 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LocalDebuggerCommandArguments>C:\Registration\test_multiscale\mesh\bunny.ply  C:\Registration\test_multiscale\mesh\bunny_source_interest_point.ply  0.1292 4.9115 500 C:\Registration\test_multiscale\output\bunny_profiles.txt 1</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>C:\Registration\test_gls_algo\matching_files\bunny_vsa_profiles_and_geom_var_copie.txt C:\Registration\test_gls_algo\matching_files\bunny_downsampled_vsa_profiles_and_geom_var_copie.txt</LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LocalDebuggerCommandArguments>C:\Registration\test_gls_algo\matching_files\bunny_vsa_profiles_and_geom_var_copie.txt C:\Registration\test_gls_algo\matching_files\bunny_downsampled_vsa_profiles_and_geom_var_copie.txt</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>

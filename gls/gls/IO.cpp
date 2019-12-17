@@ -90,7 +90,7 @@ bool read_ply_file(std::string filename, vector<Point>& pointCloud)
 
 
 
-bool read_descriptors_text_file(std::string filename, std::vector<std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>>>& gls_profiles, int& nb_points, int& nb_samples, Scalar& min_scale, Scalar& max_scale, Scalar& base, std::map<Point, std::vector<Scalar>, PointComp>* geom_var_ptr)
+bool read_descriptors_text_file(std::string filename, std::vector<std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>>>& gls_profiles, int& nb_points, int& nb_samples, Scalar& min_scale, Scalar& max_scale, Scalar& base, std::map<Point, std::vector<Scalar>>* geom_var_ptr)
 {
 	std::string file_ext = extract_ext(filename);
 	if (file_ext.compare("txt") == 0)

@@ -6,8 +6,7 @@
 #include "Eigen/Eigen"
 #include "matching_prioritization.h"
 
-typedef Point::Scalar Scalar;
-typedef Point::VectorType VectorType;
+
 class RansacScheme
 {
 private:

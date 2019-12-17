@@ -117,7 +117,7 @@ Scalar  compute_geometric_variation(DFit& _fit, vector<Point>& pointCloud, Scala
 }
 
 
-
+/*
 int main(int argc, char** argv)
 {
 
@@ -231,7 +231,7 @@ int main(int argc, char** argv)
 	return 0;
 
 }
-
+*/
 
 /*
 int main(int argc, char** argv)
@@ -348,23 +348,22 @@ int main(int argc, char** argv)
 }
 */
 
-/*
+
 int main(int argc, char** argv)
 {
 
-	if (argc < 4)
+	if (argc < 3)
 	{
-		std::cout << "you must enter at least 3 arguments : the source descriptors file, the target descriptors file and the output file " << std::endl;
+		std::cout << "you must enter at least 2 arguments : the source descriptors file and the target descriptors file" << std::endl;
 		return EXIT_FAILURE;
 	}
 
-	std::string descriptors_source_filename, descriptors_target_filename, output_filename;
+	std::string descriptors_source_filename, descriptors_target_filename;
 	Scalar min_scale, max_scale, base;
 	int nb_samples, nb_source_points, nb_target_points;
 
 	descriptors_source_filename = argv[1];
 	descriptors_target_filename = argv[2];
-	output_filename = argv[3];
 	Scalar alpha = 1.0;
 
 	// get descriptors and headers 
@@ -393,4 +392,3 @@ int main(int argc, char** argv)
 	return 0;
 
 }
-*/

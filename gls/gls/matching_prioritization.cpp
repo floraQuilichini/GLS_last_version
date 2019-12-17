@@ -52,7 +52,7 @@ std::priority_queue<std::tuple<Point, Point, Scalar, Scalar>, std::vector<std::t
 	return (&queue_);
 }
 
-std::pair<Point, Scalar> compute_point_priority(std::map<Point, std::vector<Scalar>, PointComp>::iterator point_geom_var, int nb_samples, Scalar alpha)
+std::pair<Point, Scalar> compute_point_priority(std::map<Point, std::vector<Scalar>>::iterator point_geom_var, int nb_samples, Scalar alpha)
 {
 	Scalar sum = 0.0;
 	for (int i = 0; i < nb_samples; i++)
@@ -62,8 +62,6 @@ std::pair<Point, Scalar> compute_point_priority(std::map<Point, std::vector<Scal
 }
 
 
-
-typedef Point::Scalar Scalar;
 Scalar compute_point_priority(std::vector<Scalar>& point_geom_var, int nb_samples, Scalar alpha)
 {
 	Scalar sum = 0.0;
@@ -74,7 +72,7 @@ Scalar compute_point_priority(std::vector<Scalar>& point_geom_var, int nb_sample
 }
 
 
-std::tuple<Point, Point, Scalar> compute_pair_cost(std::map<Point, std::vector<Scalar>, PointComp>::iterator source_geom_var, std::map < Point, std::vector<Scalar>, PointComp > ::iterator target_geom_var, int nb_samples, Scalar alpha)
+std::tuple<Point, Point, Scalar> compute_pair_cost(std::map<Point, std::vector<Scalar>>::iterator source_geom_var, std::map < Point, std::vector<Scalar>> ::iterator target_geom_var, int nb_samples, Scalar alpha)
 {
 	std::pair<Point, Scalar> source_priority = compute_point_priority(source_geom_var, nb_samples, alpha);
 	std::pair<Point, Scalar> target_priority = compute_point_priority(target_geom_var, nb_samples, alpha);
@@ -84,7 +82,6 @@ std::tuple<Point, Point, Scalar> compute_pair_cost(std::map<Point, std::vector<S
 }
 
 
-typedef Point::Scalar Scalar;
 Scalar compute_pair_cost(std::vector<Scalar>& source_geom_var, std::vector<Scalar>& target_geom_var, int nb_samples, Scalar alpha)
 {
 	Scalar source_priority = compute_point_priority(source_geom_var, nb_samples, alpha);
