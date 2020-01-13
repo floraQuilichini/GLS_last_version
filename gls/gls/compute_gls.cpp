@@ -46,9 +46,10 @@ std::tuple<Scalar, VectorType, Scalar, Scalar>  compute_gls_descriptor(Fit& _fit
 	_fit.init(_p.pos());  // choose point where you want to compute the descriptor
 
 	// Iterate over samples and _fit the primitive
-	for (vector<Point>::iterator it = pointCloud.begin(); it != pointCloud.end(); it++)
+//#pragma omp parallel for -- not faster with parallel for
+	for (int u = 0; u < pointCloud.size(); u++)
 	{
-		_fit.addNeighbor(*it);
+		_fit.addNeighbor(pointCloud[u]);
 	}
 	//finalize fitting
 	_fit.finalize();
@@ -83,37 +84,52 @@ typedef Point::Scalar Scalar;
 typedef Point::VectorType VectorType;
 // Define related structure
 typedef DistWeightFunc<Point, SmoothWeightKernel<Scalar> > WeightFunc;
-typedef Basket<Point, WeightFunc, OrientedSphereFit, GLSParam, OrientedSphereSpaceDer, GLSDer, GLSCurvatureHelper> DFit1;
+typedef Basket<Point, WeightFunc, OrientedSphereFit, GLSParam, OrientedSphereScaleDer, GLSDer, GLSGeomVar> DFit1;
 template<typename DFit>
 Scalar  compute_geometric_variation(DFit& _fit, vector<Point>& pointCloud, Scalar abs_scale, const Point& _p, VectorType W)
 {
+	Scalar geometric_variation = 0.0;
 
 	// Set a weighting function instance
 	_fit.setWeightFunc(WeightFunc(abs_scale));
 	// Set the evaluation position
 	_fit.init(_p.pos());  // choose point where you want to compute the descriptor
 
-						  // Iterate over samples and _fit the primitive
-	for (vector<Point>::iterator it = pointCloud.begin(); it != pointCloud.end(); it++)
+	// Iterate over samples and _fit the primitive
+//#pragma omp parallel for
+	for (int u = 0; u < pointCloud.size(); u++)
 	{
-		_fit.addNeighbor(*it);
+		_fit.addNeighbor(pointCloud[u]);
 	}
 	//finalize fitting
 	_fit.finalize();
 	//Test if the fitting ended without errors
+
 	if (_fit.isStable())
 	{
-		Scalar dtau = _fit.dtau_normalized().col(0)(0);
+		geometric_variation = _fit.geomVar(1.0, 1.0, 1.0);
+		/*Scalar dtau = _fit.dtau_normalized().col(0)(0);
 		Scalar deta = _fit.deta_normalized().col(0).norm();
 		Scalar dkappa = _fit.dkappa_normalized().col(0)(0);
-		Scalar geometric_variation = W[0]*dtau*dtau + W[1] * deta*deta + W[2] * dkappa*dkappa;
+		Scalar geometric_variation = W[0]*dtau*dtau + W[1] * deta*deta + W[2] * dkappa*dkappa;*/
 	}
-	else
-	{
-		Scalar geometric_variation = 0.0;
-		return geometric_variation;
-	}
+	return geometric_variation;
 
+	/*try {
+		if (_fit.isStable())
+		{
+			geometric_variation = _fit.geomVar(1.0, 1.0, 1.0);
+			return geometric_variation;
+		}
+		else
+			throw std::string("fitting instable");
+		
+	}
+	catch (std::string const& chaine)
+	{
+		std::cerr << chaine << std::endl;
+	}
+	*/
 }
 
 
@@ -198,11 +214,13 @@ int main(int argc, char** argv)
 	else
 		base = 1.0;
 
+//#pragma omp parallel for
 	for (int j = 0; j < pointCloud_down.size(); j++)
 	{
 		Point p = pointCloud_down[j];
 		std::vector<std::tuple<Scalar, VectorType, Scalar, Scalar>> point_gls_descriptors_over_scales;
 		std::vector<Scalar> point_geometric_variation_over_scales;
+//#pragma omp parallel for
 		for (int i = 0; i < nb_samples; i++)
 		{
 			abs_scale = min_scale*pow(base, i);
@@ -352,19 +370,20 @@ int main(int argc, char** argv)
 int main(int argc, char** argv)
 {
 
-	if (argc < 3)
+	if (argc < 4)
 	{
-		std::cout << "you must enter at least 2 arguments : the source descriptors file and the target descriptors file" << std::endl;
+		std::cout << "you must enter at least 3 arguments : the source descriptors file,  the target descriptors file, and the output file where to write the transform matrix" << std::endl;
 		return EXIT_FAILURE;
 	}
 
-	std::string descriptors_source_filename, descriptors_target_filename;
+	std::string descriptors_source_filename, descriptors_target_filename, transform_filename;
 	Scalar min_scale, max_scale, base;
 	int nb_samples, nb_source_points, nb_target_points;
 
 	descriptors_source_filename = argv[1];
 	descriptors_target_filename = argv[2];
-	Scalar alpha = 1.0;
+	transform_filename = argv[3];
+	Scalar alpha = 4.0;
 
 	// get descriptors and headers 
 	std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>> source_descriptors_geom_var, target_descriptors_geom_var;
@@ -377,17 +396,22 @@ int main(int argc, char** argv)
 	Scalar ratio = 0.1;
 	std::vector<std::tuple<Point, Point, Scalar, Scalar>> three_closest_pairs = compute_3_closest_pairs(source_descriptors_geom_var, target_descriptors_geom_var, ratio, nb_samples, w);
 
-
 	// apply Ransac scheme
 	int nb_iterations = 1000;
-	Scalar max_err_scale = 0.05;
-	Scalar max_err_reg = 0.05;
-	Scalar max_err_norm = 0.05;
+	Scalar max_err_scale = 0.2;
+	Scalar max_err_reg = 0.4;  // error reg is big ( err > 5 & err < 13)
+	Scalar max_err_norm = 0.35;
 	pair_priority_queue queue(three_closest_pairs);
+	//queue.display_queue();
+	std::string output_filename = "C:\\Registration\\test_gls_algo\\matching_pairs\\source_matching_pairs.txt";
+	write_closest_matching_points(queue, output_filename, false);
 	RansacScheme ransac(queue);
 	Eigen::Matrix4d transform = ransac.ransac_algorithm(nb_iterations, max_err_scale, max_err_reg, max_err_norm, three_closest_pairs);
 
-	std::cout << "transform : " << transform << std::endl;
+	//std::cout << "transform : " << transform << std::endl;
+
+	// write transform
+	write_matrix_transform(transform, transform_filename);
 
 	return 0;
 

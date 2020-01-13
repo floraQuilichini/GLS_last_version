@@ -47,6 +47,17 @@ void pair_priority_queue::empty_queue()
 	}
 }
 
+void pair_priority_queue::display_queue()
+{
+	std::priority_queue<std::tuple<Point, Point, Scalar, Scalar>, std::vector<std::tuple<Point, Point, Scalar, Scalar>>, mycomparison> queue_copie = queue_;
+	while (!queue_copie.empty())
+	{
+		std::tuple<Point, Point, Scalar, Scalar> tuple = queue_copie.top();
+		queue_copie.pop();
+		std::cout << "p_target : " << std::get<0>(tuple).pos() <<", p_source : " << std::get<1>(tuple).pos() << ", relative scale : " << std::get<2>(tuple) << ", cost : " << std::get<3>(tuple) << std::endl;
+	}
+}
+
 std::priority_queue<std::tuple<Point, Point, Scalar, Scalar>, std::vector<std::tuple<Point, Point, Scalar, Scalar>>, mycomparison>* pair_priority_queue::get_queue_ptr()
 {
 	return (&queue_);

@@ -5,7 +5,11 @@
 
 Scalar Median(std::vector<Scalar>::iterator begin, std::vector<Scalar>::iterator end);
 
+Scalar compute_points_dist(Point& p1, Point& p2);
+
 void update_maxCorr_and_lag(Scalar max_Dsigma, std::multiset<Scalar>& max_corr, Scalar lag, Point point, std::vector<std::pair<Point, Scalar>>& pairs_point_and_scale);
+
+std::tuple<Point, Point, Point> find_2_farthest_points(Point p0, std::vector<std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>>>& points_profiles);
 
 Point find_point_matching(std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>> & p_profile, std::vector<std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>>>& pts_profiles, VectorType w, Scalar alpha, Scalar nb_samples);
 

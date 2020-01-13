@@ -9,6 +9,7 @@
 #include <ctime>
 #include "Eigen/Eigen"
 #include "relative_scale.h"
+#include "IO.h"
 #include "matching_prioritization.h"
 #include "math_approx.h"
 
@@ -23,6 +24,11 @@ Scalar Median(std::vector<Scalar>::iterator begin, std::vector<Scalar>::iterator
 }
 
 
+Scalar compute_points_dist(Point& p1, Point& p2)
+{
+	return sqrt((p1.pos().transpose()*(p1.pos())).sum());
+}
+
 void update_maxCorr_and_lag(Scalar max_Dsigma, std::multiset<Scalar>& max_corr, Scalar lag, Point point, std::vector<std::pair<Point, Scalar>>& pairs_point_and_scale)
 {
 	std::multiset<Scalar>::iterator it = max_corr.insert(max_Dsigma);
@@ -30,9 +36,48 @@ void update_maxCorr_and_lag(Scalar max_Dsigma, std::multiset<Scalar>& max_corr, 
 	max_corr.erase(max_corr.begin());
 
 	if (dist > 0)
-		pairs_point_and_scale[dist-1] = std::make_pair(point, lag);
+	{
+		int count = 0;
+		while (count < dist -1)
+		{
+			pairs_point_and_scale[count] = pairs_point_and_scale[count+1];
+			count = count + 1;
+		}
+		pairs_point_and_scale[dist -1] = std::make_pair(point, lag);
+		/*std::cout << "max dsigma : " << max_Dsigma << std::endl;
+		std::cout << "dist : " << dist << std::endl;
+		std::cout << "lag : " << lag << std::endl;*/
+	}
 }
 
+
+std::tuple<Point, Point, Point> find_2_farthest_points(Point p0, std::vector<std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>>>& points_profiles)
+{
+	Scalar dist1 = 0.0;
+	Scalar dist2 = 0.0;
+	Point p1, p2;
+	for (int u = 0; u < points_profiles.size(); u++)
+	{
+		Point p = points_profiles[u].first;
+		Scalar dist = compute_points_dist(p0, p);
+		if (dist > dist1)
+		{
+			p2 = p1;
+			dist2 = dist1;
+			p1 = p;
+			dist1 = dist;
+		}
+		else
+		{
+			if (dist > dist2)
+			{
+				p2 = p;
+				dist2 = dist;
+			}
+		}
+	}
+	return std::make_tuple(p0, p1, p2);
+}
 
 
 Point find_point_matching(std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>> & p_profile, std::vector<std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>>>& pts_profiles, VectorType w, Scalar alpha, Scalar nb_samples)
@@ -298,18 +343,20 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 
 		//compute point priority
 		std::map<Point, Scalar> target_priority, source_priority;
-#pragma omp parallel for
+//#pragma omp parallel for
 		for (int k=0; k<nb_target_points; k++)
 		{
 			Scalar priority = compute_point_priority(std::get<2>(target_gls_profiles[k]), nb_samples, alpha);
 			target_priority.insert(std::make_pair(std::get<0>(target_gls_profiles[k]), priority));
 		}
 
-#pragma omp parallel for
+		//std::cout << "source cost : " << std::endl;
+//#pragma omp parallel for
 		for (int k = 0; k<nb_source_points; k++)
 		{
 			Scalar priority = compute_point_priority(std::get<2>(source_gls_profiles[k]), nb_samples, alpha);
 			source_priority.insert(std::make_pair(std::get<0>(source_gls_profiles[k]), priority));
+			//std::cout << priority << std::endl;
 		}
 
 		// build lookup table
@@ -324,10 +371,11 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 		/*std::cout << "size W : " << W.rows() << " rows and : " << W.cols() << " cols" << std::endl;*/
 
 		// search for target->source matching
-#pragma omp parallel for
+//#pragma omp parallel for
 		for (int u = 0 ; u < target_gls_profiles.size() ; ++u)
 		// for (std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>::iterator it_t = target_gls_profiles.begin(); it_t != target_gls_profiles.end(); ++it_t)
 		{
+			//std::cout << " p_target = " << std::get<0>(target_gls_profiles[u]).pos().transpose() << std::endl;
 			const std::vector<std::tuple<Scalar, Scalar, Scalar>> & pt_target_profile = std::get<1>(target_gls_profiles[u]);
 			// std::vector<std::tuple<Scalar, Scalar, Scalar>> pt_target_profile = std::get<1>(*it_t);
 			std::vector<Scalar> pt_tau_profile, pt_kappa_profile, pt_phi_profile;
@@ -348,9 +396,10 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 			std::multiset<Scalar> max_corr{ 0.0, 0.0, 0.0 };
 			//clock_t tstart, tend;
 			//tstart = clock();
-#pragma omp parallel for
+//#pragma omp parallel for
 			for (int v = 0; v < source_gls_profiles.size(); ++v)
 			{
+				//std::cout << " p_source = " << std::get<0>(source_gls_profiles[v]).pos().transpose() << std::endl;
 				const std::vector<std::tuple<Scalar, Scalar, Scalar>> & ps_source_profile = std::get<1>(source_gls_profiles[v]);
 				std::vector<Scalar> ps_tau_profile, ps_kappa_profile, ps_phi_profile;
 
@@ -371,8 +420,45 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 				Scalar lag = 0.0;
 				Eigen::ArrayXd tanh_vec;
 				// compute shifts
-					// right shifts
-#pragma omp parallel for
+					// left shifts (positive ones)
+//#pragma omp parallel for
+					for (int shift = 0; shift < max_shift - 2; shift++)
+					{
+						Eigen::ArrayX3d diff(nb_samples - shift, 3);
+
+						diff.block(0, 0, nb_samples - shift, 3) = ps_profiles.block(shift, 0, nb_samples - shift, 3) - pt_profiles.block(0, 0, nb_samples - shift, 3);
+						Eigen::Array<Scalar, Eigen::Dynamic, 3, Eigen::RowMajor> diff2 = (diff*diff).rowwise()*W;
+						Eigen::Array<Scalar, Eigen::Dynamic, 1, 1, Eigen::RowMajor> diss_over_scales = (diff2).rowwise().sum();
+						Eigen::ArrayXd sigma = 1.0 - (alpha*diss_over_scales).tanh();
+						/*lookup_table.read_lookup_table(alpha*diss_over_scales, tanh_vec);
+						Eigen::ArrayXd sigma = 1.0 - tanh_vec;*/
+						Scalar Dsigma = 1.0 / (Scalar)(nb_samples - 1 - shift) * sigma.sum();
+
+						if (Dsigma > max_Dsigma)
+						{
+							max_Dsigma = Dsigma;
+							lag = shift;
+							//std::cout << " max Dsigma : " << max_Dsigma << std::endl;
+						}
+
+						/*if (std::get<0>(source_gls_profiles[v]).pos() == std::get<0>(target_gls_profiles[u]).pos())
+						{
+						std::cout << " Dsigma = " << Dsigma << std::endl;
+						std::cout << v << std::endl;
+						}*/
+
+						/*if (v == 283 && shift == 25)
+						{
+							std::cout << "Diff : " << diff << std::endl;
+							std::cout << "Diff2 : " << diff2 << std::endl;
+							std::cout << " Dsigma : " << Dsigma << std::endl;
+						}*/
+
+					}
+
+
+					// right shifts (negative ones)
+//#pragma omp parallel for
 				for (int shift = 0; shift < max_shift - 2; shift++)
 				{
 					Eigen::ArrayX3d diff(nb_samples - shift, 3);
@@ -383,9 +469,9 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 					//std::cout << " diff2 : " << diff2.size() << std::endl;
 					Eigen::Array<Scalar, Eigen::Dynamic, 1, 1, Eigen::RowMajor> diss_over_scales = (diff2).rowwise().sum();
 					//std::cout << " diss_over_scales : " << diss_over_scales.size() << std::endl;
-					//Eigen::ArrayXd sigma = 1.0 - (alpha*diss_over_scales).tanh();
-					lookup_table.read_lookup_table(alpha*diss_over_scales, tanh_vec);  // look-up table is faster than calling tanh()
-					Eigen::ArrayXd sigma = 1.0 - tanh_vec;
+					Eigen::ArrayXd sigma = 1.0 - (alpha*diss_over_scales).tanh();
+					/*lookup_table.read_lookup_table(alpha*diss_over_scales, tanh_vec);  // look-up table is faster than calling tanh()
+					Eigen::ArrayXd sigma = 1.0 - tanh_vec;*/
 					//std::cout << " sigma : " << sigma.size() << std::endl;
 					Scalar Dsigma = 1.0 / (Scalar)(nb_samples - 1 - shift) * sigma.sum();
 
@@ -393,28 +479,20 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 					{
 						max_Dsigma = Dsigma;
 						lag = -shift;
+						//std::cout << " max Dsigma : " << max_Dsigma << std::endl;
 					}
 
-				}
-				// left shifts
-#pragma omp parallel for
-				for (int shift = 0; shift < max_shift - 2; shift++)
-				{
-					Eigen::ArrayX3d diff(nb_samples - shift, 3);
-
-					diff.block(0, 0, nb_samples - shift, 3) = ps_profiles.block(shift, 0, nb_samples - shift, 3) - pt_profiles.block(0, 0, nb_samples - shift, 3);
-					Eigen::Array<Scalar, Eigen::Dynamic, 3, Eigen::RowMajor> diff2 = (diff*diff).rowwise()*W;
-					Eigen::Array<Scalar, Eigen::Dynamic, 1, 1, Eigen::RowMajor> diss_over_scales = (diff2).rowwise().sum();
-					//Eigen::ArrayXd sigma = 1.0 - (alpha*diss_over_scales).tanh();
-					lookup_table.read_lookup_table(alpha*diss_over_scales, tanh_vec);
-					Eigen::ArrayXd sigma = 1.0 - tanh_vec;
-					Scalar Dsigma = 1.0 / (Scalar)(nb_samples - 1 - shift) * sigma.sum();
-
-					if (Dsigma > max_Dsigma)
+					/*if (std::get<0>(source_gls_profiles[v]) == std::get<0>(target_gls_profiles[u]))
 					{
-						max_Dsigma = Dsigma;
-						lag = shift;
-					}
+						std::cout << " Dsigma = " << Dsigma << std::endl;
+						std::cout << v << std::endl;
+					}*/
+					/*if ( v == 283 && shift == 25)
+					{
+						std::cout << "Diff : " << diff << std::endl;
+						std::cout << "Diff2 : " << diff2 << std::endl;
+						std::cout << " Dsigma : " << Dsigma << std::endl;
+					}*/
 
 				}
 
@@ -423,11 +501,20 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 
 			}
 
+		/*	// display pair_source_and_scale
+			for (int k = 0; k < pairs_source_and_scale.size(); k++)
+				std::cout << "source matching point : " << pairs_source_and_scale[k].first.pos() << ", lag : " << pairs_source_and_scale[k].second << std::endl;
+		*/	
+			std::string output_filename = "C:\\Registration\\test_gls_algo\\matching_pairs\\source_matching_pairs_unsorted.txt";
+			write_closest_matching_points(std::get<0>(target_gls_profiles[u]), pairs_source_and_scale, output_filename, false);
+		
+
 			// store matching target-source matching pairs with their cost
 			for (int k = 0; k < 3; k++)
 			{
 				const Point & pt = std::get<0>(target_gls_profiles[u]);
 				Scalar cost_pair = target_priority.find(pt)->second * source_priority.find(pairs_source_and_scale[k].first)->second;
+				//std::cout << "target_cost : " << target_priority.find(pt)->second << ", source_cost : "<< source_priority.find(pairs_source_and_scale[k].first)->second << ", pair cost : "<< cost_pair << std::endl;
 				target_source_matchings.push_back(std::make_tuple(pt, pairs_source_and_scale[k].first, pairs_source_and_scale[k].second, cost_pair));
 			}
 

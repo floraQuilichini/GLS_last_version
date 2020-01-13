@@ -84,6 +84,8 @@ Eigen::Matrix4d RansacScheme::compute_rigid_transform(RansacScheme::triplet t)
 	transform.block(0, 3, 3, 1) = translation;
 	transform(3, 3) = 1.0;
 
+	std::cout << "transform : " << transform << std::endl;
+
 	return transform;
 }
 
@@ -119,6 +121,8 @@ Eigen::Matrix4d RansacScheme::compute_rigid_transform(RansacScheme::triplet t, s
 	// solve linear system 
 	Eigen::Matrix4d transform = target_data.colPivHouseholderQr().solve(source_data);
 
+	std::cout << "transform : " << transform << std::endl;
+
 	return transform;
 }
 
@@ -133,6 +137,7 @@ Scalar RansacScheme::registrationErr(Eigen::Matrix4d transform, std::vector<std:
 	for (int k = 0; k < nb_pairs; k++)
 		err += ((Eigen::Map<Eigen::MatrixXd>(std::get<0>(pairs_source_target[k]).pos().data(),3, 1) -R*Eigen::Map<Eigen::MatrixXd>(std::get<1>(pairs_source_target[k]).pos().data(), 3, 1) - T).cwiseAbs()).sum();
 	
+	std::cout << "reg err : " << err / (Scalar)nb_pairs;
 	return err / (Scalar)nb_pairs;
 }
 
@@ -152,6 +157,7 @@ Scalar RansacScheme::normalErr(Eigen::Matrix4d transform, std::vector<std::tuple
 	for (int k = 0; k < nb_pairs; k++)
 		err += compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<0>(pairs_source_target[k]).normal().data(), 3, 1) ,  R*Eigen::Map<Eigen::MatrixXd>(std::get<1>(pairs_source_target[k]).normal().data(), 3, 1));
 
+	std::cout << "  normal err : " << err / (Scalar)nb_pairs << std::endl;
 	return err / (Scalar)nb_pairs;
 }
 
@@ -194,6 +200,7 @@ Eigen::Matrix4d RansacScheme::ransac_algorithm(int nb_iterations, Scalar max_err
 	{
 		triplet t = pop_triplet();
 		Scalar err_scale = scaleDiff(t).first;
+		std::cout << "error scale " << err_scale <<std::endl;
 		if (err_scale < max_err_scale)
 		{
 			Scalar avgScale = scaleDiff(t).second;

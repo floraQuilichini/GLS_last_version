@@ -3,6 +3,7 @@
 #include <string>
 #include <tuple>
 #include "base.h"
+#include "matching_prioritization.h"
 
 
 std::string extract_ext(std::string filename);
@@ -29,3 +30,9 @@ void write_points(int nb_points, int nb_samples, Scalar min_scale, Scalar max_sc
 void write_relative_scale_and_matching_points(std::string output_filename, std::pair<Scalar, std::vector<std::tuple<Point, Point, Scalar>>>& relative_scale_and_matching_points);
 
 void write_matching_points(std::string output_filename, std::vector<std::pair<Point, Point>>& matching_points);
+
+void write_matrix_transform(Eigen::Matrix4d& transform, std::string& output_filename);
+
+void write_closest_matching_points(Point& target_point, std::vector<std::pair<Point, Scalar>>& pairs_source_and_scale, std::string& output_filename, bool new_file = false);
+
+void write_closest_matching_points(pair_priority_queue& queue, std::string& output_filename, bool new_file = false);

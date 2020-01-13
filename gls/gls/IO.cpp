@@ -8,6 +8,7 @@
 #include <tuple>
 #include <fstream>
 #include <string>
+#include <iomanip>
 #include "Patate/grenaille.h"
 #include "Eigen/Eigen"
 #include "IO.h"
@@ -270,11 +271,10 @@ void write_complete_profiles(int nb_points, int nb_samples, Scalar min_scale, Sc
 		for (int i = 0; i < nb_points; i++)
 		{
 			Point point = (points_gls_descriptors_over_scales[i]).first;
-			output_file << (point.pos()).transpose() << " " << (point.normal()).transpose() << std::endl;
+			output_file << std::fixed << (point.pos())[0] << " "  << (point.pos())[1] << " " << (point.pos())[2] << " " << std::fixed << (point.normal())[0] << " " << (point.normal())[1] << " " << (point.normal())[2] << std::endl;
 			std::vector<std::tuple<Scalar, VectorType, Scalar, Scalar>> descriptors_over_scales = (points_gls_descriptors_over_scales[i]).second;
 			for (int j = 0; j < nb_samples; j++)
-				output_file << std::get<0>(descriptors_over_scales[j]) << " " << std::get<2>(descriptors_over_scales[j]) << " " << std::get<3>(descriptors_over_scales[j]) <<  " " << it->second[j] <<  std::endl;
-
+				output_file << std::setprecision(10) << std::get<0>(descriptors_over_scales[j]) << " " << std::setprecision(10) << std::get<2>(descriptors_over_scales[j]) << " " << std::setprecision(10) << std::get<3>(descriptors_over_scales[j]) << " " << it->second[j] << std::endl;
 			it++;
 		}
 		
@@ -285,10 +285,10 @@ void write_complete_profiles(int nb_points, int nb_samples, Scalar min_scale, Sc
 		for (int i = 0; i < nb_points; i++)
 		{
 			Point point = (points_gls_descriptors_over_scales[i]).first;
-			output_file << (point.pos()).transpose() << " " << (point.normal()).transpose() << std::endl;
+			output_file << std::setprecision(6) << (point.pos())[0] << " " << (point.pos())[1] << " " << (point.pos())[2] << " " << std::setprecision(6) << (point.normal())[0] << " " << (point.normal())[1] << " " << (point.normal())[2] << std::endl;
 			std::vector<std::tuple<Scalar, VectorType, Scalar, Scalar>> descriptors_over_scales = (points_gls_descriptors_over_scales[i]).second;
 			for (int j = 0; j < nb_samples; j++)
-				output_file << std::get<0>(descriptors_over_scales[j]) << " " << std::get<2>(descriptors_over_scales[j]) << " " << std::get<3>(descriptors_over_scales[j]) << std::endl;
+				output_file << std::setprecision(10) << std::get<0>(descriptors_over_scales[j]) << " " << std::setprecision(10) << std::get<2>(descriptors_over_scales[j]) << " " << std::setprecision(10) << std::get<3>(descriptors_over_scales[j]) << std::endl;
 		}
 	}
 	output_file.close();
@@ -367,3 +367,49 @@ void write_matching_points(std::string output_filename, std::vector<std::pair<Po
 	output_file.close();
 }
 
+
+void write_matrix_transform(Eigen::Matrix4d& transform, std::string& output_filename)
+{
+	std::ofstream output_file;
+	output_file.open(output_filename, ios::out);
+	for (int i = 0; i < 4; i++)
+		output_file << transform(i, 0) << " " << transform(i, 1) << " " << transform(i, 2) << " " << transform(i, 3) << std::endl;
+	output_file.close();
+}
+
+
+void write_closest_matching_points(Point& target_point, std::vector<std::pair<Point, Scalar>>& pairs_source_and_scale, std::string& output_filename, bool new_file)
+{
+	std::ofstream output_file;
+	if (new_file)
+		output_file.open(output_filename, ios::out);
+	else
+		output_file.open(output_filename, ios::app);
+
+	for (int i = 0; i < pairs_source_and_scale.size(); i++)
+		output_file << target_point.pos().transpose() << " " << pairs_source_and_scale[i].first.pos().transpose() << " " << pairs_source_and_scale[i].second << std::endl;
+
+	output_file.close();
+}
+
+
+void write_closest_matching_points(pair_priority_queue& queue, std::string& output_filename, bool new_file)
+{
+	auto queue_copy = (*queue.get_queue_ptr());
+	std::ofstream output_file;
+
+	if (new_file)
+		output_file.open(output_filename, ios::out);
+	else
+		output_file.open(output_filename, ios::app);
+
+	while (!queue_copy.empty())
+	{
+		std::tuple<Point, Point, Scalar, Scalar> tuple = queue_copy.top();
+		queue_copy.pop();
+		//std::cout << " cost : " << std::get<3>(tuple) << std::endl;
+		output_file << std::get<0>(tuple).pos().transpose() << " " << std::get<1>(tuple).pos().transpose() << " " << std::get<2>(tuple) << " " << std::get<3>(tuple) << std::endl;
+	}
+
+	output_file.close();
+}
