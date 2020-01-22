@@ -34,6 +34,21 @@ pair_priority_queue::pair_priority_queue(const std::vector<std::tuple<Point, Poi
 		queue_.push(vec_pair[i]);
 }
 
+pair_priority_queue::pair_priority_queue(const std::vector<std::tuple<Point, Point, Scalar, Scalar>>& vec_pair, Scalar min_source_scale, Scalar min_target_scale, Scalar base)
+{
+	
+	for (int i = 0; i < vec_pair.size(); i++)
+	{
+		// compute scale 
+		Scalar lag = std::get<2>(vec_pair[i]);
+		Scalar scale = (min_target_scale / min_source_scale)*pow(base, -lag);
+		// fill queue
+		queue_.push(std::make_tuple(std::get<0>(vec_pair[i]), std::get<1>(vec_pair[i]), scale, std::get<3>(vec_pair[i])));
+	}
+
+}
+
+
 void pair_priority_queue::add_pair(const std::tuple<Point, Point, Scalar, Scalar>& pair)
 {
 	queue_.push(pair);

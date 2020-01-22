@@ -10,8 +10,127 @@
 #include "Eigen/Eigen"
 #include "ransac_scheme.h"
 
+
+Scalar RansacScheme::compute_points_dist(Point& p1, Point& p2)
+{
+	return sqrt((p1.pos().transpose()*(p1.pos())).sum());
+}
+
+
+void RansacScheme::find_2_farthest_pairs(RansacScheme::triplet& triplet)
+{
+	Scalar dist2 = 0.0;
+	Scalar dist3 = 0.0;
+	std::tuple<Point, Point, Scalar, Scalar> pair2, pair3;
+	Point p1 = std::get<0>(triplet.pair1);
+	queue_copy_ = *queue_ptr_;
+
+	while(!queue_copy_.empty())
+	{
+		std::tuple<Point, Point, Scalar, Scalar> pair = queue_copy_.top();
+		queue_copy_.pop();
+		if (is_q_unique(triplet, pair))
+		{
+			Point p = std::get<0>(pair);
+			Scalar dist = compute_points_dist(p1, p);
+			if (dist > dist2)
+			{
+				triplet.pair3 = triplet.pair2;
+				dist3 = dist2;
+				triplet.pair2 = pair;
+				dist2 = dist;
+			}
+			else
+			{
+				if (dist > dist3)
+				{
+					triplet.pair3 = pair;
+					dist3 = dist;
+				}
+			}
+		}
+	}
+
+}
+
+
 RansacScheme::RansacScheme(pair_priority_queue& pair_prioritized) : queue_ptr_(pair_prioritized.get_queue_ptr()) {}
+
 RansacScheme::triplet RansacScheme::pop_triplet()
+{
+	RansacScheme::triplet triplet;
+	bool is_triplet_complete = false;
+
+	while (queue_ptr_->size() > 2 && !is_triplet_complete)
+	{
+		// get first pair
+		triplet.pair1 = queue_ptr_->top();
+		queue_ptr_->pop();
+
+		//get two other pairs
+		queue_copy_ = *queue_ptr_;
+		int counter = 1;
+		while (!queue_copy_.empty())
+		{
+			std::tuple<Point, Point, Scalar, Scalar> pair = queue_copy_.top();
+			queue_copy_.pop();
+			if (!(std::get<0>(pair) == std::get<0>(triplet.pair1) || std::get<1>(pair) == std::get<1>(triplet.pair1)))
+			{
+				if (counter == 1)
+				{
+					triplet.pair2 = pair;
+					counter += 1;
+				}
+				if (counter == 2)
+				{
+					if (!(std::get<0>(pair) == std::get<0>(triplet.pair2) || std::get<1>(pair) == std::get<1>(triplet.pair2)))
+					{
+						triplet.pair3 = pair;
+						is_triplet_complete = true;
+						break;
+					}
+				}
+				
+			}
+		}
+
+		// empty queue copy
+		while (!queue_copy_.empty())
+			queue_copy_.pop();
+	}
+
+	return triplet;
+}
+
+
+RansacScheme::triplet RansacScheme::pick_triplet(const int ind1, const int ind2, const int ind3)
+{
+	queue_copy_ = *queue_ptr_;
+	RansacScheme::triplet triplet;
+	int counter = 0;
+	while (!queue_copy_.empty())
+	{
+		if (counter + 1 == ind1)
+			triplet.pair1 = queue_copy_.top();
+		else
+		{
+			if (counter + 1 == ind2)
+				triplet.pair2 = queue_copy_.top();
+			else
+			{
+				if (counter + 1 == ind3)
+					triplet.pair3 = queue_copy_.top();
+			}
+		}
+
+		queue_copy_.pop();
+		counter += 1;
+	 }
+
+	return triplet;
+}
+
+RansacScheme::triplet RansacScheme::pop_3_farthest_pairs()
 {
 	RansacScheme::triplet triplet;
 
@@ -19,11 +138,10 @@ RansacScheme::triplet RansacScheme::pop_triplet()
 	{
 		triplet.pair1 = queue_ptr_->top();
 		queue_ptr_->pop();
-		triplet.pair2 = queue_ptr_->top();
-		queue_ptr_->pop();
-		triplet.pair3 = queue_ptr_->top();
-		queue_ptr_->pop();
+		
+		find_2_farthest_pairs(triplet);
 	}
+	
 	return triplet;
 }
 
@@ -38,12 +156,16 @@ std::pair<Scalar, Scalar> RansacScheme::scaleDiff(RansacScheme::triplet t)
 /*for that function, we follow the tutorial http://nghiaho.com/?page_id=671 */
 Eigen::Matrix4d RansacScheme::compute_rigid_transform(RansacScheme::triplet t)
 {
+
+	// compute scale (target/source)
+	Scalar scale = compute_scale(t);
+
 	// points 
-	VectorType target_pos1 = std::get<0>(t.pair1).pos();
+	VectorType target_pos1 = (1.0/scale)*std::get<0>(t.pair1).pos();
 	VectorType source_pos1 = std::get<1>(t.pair1).pos();
-	VectorType target_pos2 = std::get<0>(t.pair2).pos();
+	VectorType target_pos2 = (1.0 / scale)*std::get<0>(t.pair2).pos();
 	VectorType source_pos2 = std::get<1>(t.pair2).pos();
-	VectorType target_pos3 = std::get<0>(t.pair3).pos();
+	VectorType target_pos3 = (1.0 / scale)*std::get<0>(t.pair3).pos();
 	VectorType source_pos3 = std::get<0>(t.pair3).pos();
 
 	// target and source data
@@ -127,18 +249,29 @@ Eigen::Matrix4d RansacScheme::compute_rigid_transform(RansacScheme::triplet t, s
 }
 
 
-
-Scalar RansacScheme::registrationErr(Eigen::Matrix4d transform, std::vector<std::tuple<Point, Point, Scalar, Scalar>>& pairs_source_target)
+Scalar RansacScheme::registrationErr(Eigen::Matrix4d transform, RansacScheme::triplet& triplet)
 {
-	Scalar err = 0.0;
-	int nb_pairs = pairs_source_target.size();
 	Eigen::Matrix3d R = transform.block(0, 0, 3, 3);
 	Eigen::Vector3d T = transform.block(0, 3, 3, 1);
-	for (int k = 0; k < nb_pairs; k++)
-		err += ((Eigen::Map<Eigen::MatrixXd>(std::get<0>(pairs_source_target[k]).pos().data(),3, 1) -R*Eigen::Map<Eigen::MatrixXd>(std::get<1>(pairs_source_target[k]).pos().data(), 3, 1) - T).cwiseAbs()).sum();
+	Scalar err1 = ((Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair1).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair1).pos().data(), 3, 1) - T).cwiseAbs()).sum();
+	Scalar err2 = ((Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair2).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair2).pos().data(), 3, 1) - T).cwiseAbs()).sum();
+	Scalar err3 = ((Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair3).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair3).pos().data(), 3, 1) - T).cwiseAbs()).sum();
+
+	std::cout << "reg err : " << (err1 + err2 + err3) / 3.0;
+	return (err1 + err2 + err3) / 3.0;
+}
+
+Scalar RansacScheme::registrationErr(Eigen::Matrix4d transform, RansacScheme::triplet& triplet, std::tuple<Point, Point, Scalar, Scalar>& q)
+{
+	Eigen::Matrix3d R = transform.block(0, 0, 3, 3);
+	Eigen::Vector3d T = transform.block(0, 3, 3, 1);
+	Scalar err1 = ((Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair1).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair1).pos().data(), 3, 1) - T).cwiseAbs()).sum();
+	Scalar err2 = ((Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair2).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair2).pos().data(), 3, 1) - T).cwiseAbs()).sum();
+	Scalar err3 = ((Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair3).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair3).pos().data(), 3, 1) - T).cwiseAbs()).sum();
+	Scalar errq = ((Eigen::Map<Eigen::MatrixXd>(std::get<1>(q).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(q).pos().data(), 3, 1) - T).cwiseAbs()).sum();
 	
-	std::cout << "reg err : " << err / (Scalar)nb_pairs;
-	return err / (Scalar)nb_pairs;
+	std::cout << "reg err : " << (err1 + err2 + err3 + errq) / 4.0;
+	return (err1 + err2 + err3 + errq) / 4.0;
 }
 
 Scalar RansacScheme::compute_angle(VectorType v1, VectorType v2)
@@ -149,35 +282,53 @@ Scalar RansacScheme::compute_angle(VectorType v1, VectorType v2)
 	return acos(dot_product / (norm_v1*norm_v2)); // en radians
 }
 
-Scalar RansacScheme::normalErr(Eigen::Matrix4d transform, std::vector<std::tuple<Point, Point, Scalar, Scalar>>& pairs_source_target)
+Scalar RansacScheme::normalErr(Eigen::Matrix4d transform, RansacScheme::triplet& triplet)
 {
-	Scalar err = 0.0;
-	int nb_pairs = pairs_source_target.size();
-	Eigen::Matrix3d R = transform.block(0, 0, 3, 3);
-	for (int k = 0; k < nb_pairs; k++)
-		err += compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<0>(pairs_source_target[k]).normal().data(), 3, 1) ,  R*Eigen::Map<Eigen::MatrixXd>(std::get<1>(pairs_source_target[k]).normal().data(), 3, 1));
 
-	std::cout << "  normal err : " << err / (Scalar)nb_pairs << std::endl;
-	return err / (Scalar)nb_pairs;
+	Eigen::Matrix3d R = transform.block(0, 0, 3, 3);
+	Scalar err1 = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair1).normal().data(), 3, 1) ,  R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair1).normal().data(), 3, 1));
+	Scalar err2 = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair2).normal().data(), 3, 1), R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair2).normal().data(), 3, 1));
+	Scalar err3 = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair3).normal().data(), 3, 1), R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair3).normal().data(), 3, 1));
+
+	std::cout << "  normal err : " << (err1 + err2 + err3) / 3.0 << std::endl;
+	return (err1 + err2 + err3) / 3.0;
 }
+
+Scalar RansacScheme::normalErr(Eigen::Matrix4d transform, RansacScheme::triplet& triplet, std::tuple<Point, Point, Scalar, Scalar>& q)
+{
+
+	Eigen::Matrix3d R = transform.block(0, 0, 3, 3);
+	Scalar err1 = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair1).normal().data(), 3, 1), R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair1).normal().data(), 3, 1));
+	Scalar err2 = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair2).normal().data(), 3, 1), R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair2).normal().data(), 3, 1));
+	Scalar err3 = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair3).normal().data(), 3, 1), R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair3).normal().data(), 3, 1));
+	Scalar errq = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<1>(q).normal().data(), 3, 1), R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(q).normal().data(), 3, 1));
+
+	std::cout << "  normal err : " << (err1 + err2 + err3 + errq) / 4.0 << std::endl;
+	return (err1 + err2 + err3 + errq) / 4.0;
+}
+
 
 bool RansacScheme::is_q_unique(RansacScheme::triplet t, std::tuple<Point, Point, Scalar, Scalar> q)
 {
-	if (std::get<0>(t.pair1) == std::get<0>(q))
+	/*std::cout << "target point 1 : " << std::get<0>(t.pair1).pos().transpose() << " , target point 2 : " << std::get<0>(t.pair2).pos().transpose() << " , target point 3 : " << std::get<0>(t.pair3).pos().transpose() << std::endl;
+	std::cout << "source point 1 : " << std::get<1>(t.pair1).pos().transpose() << " , source point 2 : " << std::get<1>(t.pair2).pos().transpose() << " , source point 3 : " << std::get<1>(t.pair3).pos().transpose() << std::endl;
+	std::cout << "target q : " << std::get<0>(q).pos().transpose() << " , source q : " << std::get<1>(q).pos().transpose() << std::endl;*/
+
+	if (std::get<0>(t.pair1).pos() == std::get<0>(q).pos() || std::get<0>(t.pair2).pos() == std::get<0>(q).pos() || std::get<0>(t.pair3).pos() == std::get<0>(q).pos())
 		return false;
-	if (std::get<1>(t.pair1) == std::get<1>(q))
+	if (std::get<1>(t.pair1).pos() == std::get<1>(q).pos() || std::get<1>(t.pair2).pos() == std::get<1>(q).pos() || std::get<1>(t.pair3).pos() == std::get<1>(q).pos())
 		return false;
 	return true;
 }
 
 
-bool RansacScheme::is_valid(std::tuple<Point, Point, Scalar, Scalar> q, RansacScheme::triplet t, std::vector<std::tuple<Point, Point, Scalar, Scalar>>& pairs_source_target, Scalar max_err_reg, Scalar max_err_norm)
+bool RansacScheme::is_valid(std::tuple<Point, Point, Scalar, Scalar> q, RansacScheme::triplet t, Scalar max_err_reg, Scalar max_err_norm)
 {
 	if (!is_q_unique(t, q))
 		return false;
 	Eigen::Matrix4d transform = compute_rigid_transform(t, q);
-	Scalar reg_err = registrationErr(transform, pairs_source_target);
-	Scalar norm_err = normalErr(transform, pairs_source_target);
+	Scalar reg_err = registrationErr(transform, t, q);
+	Scalar norm_err = normalErr(transform, t, q);
 	if (!(reg_err < max_err_reg && norm_err < max_err_norm))
 		return false;
 	else
@@ -186,35 +337,56 @@ bool RansacScheme::is_valid(std::tuple<Point, Point, Scalar, Scalar> q, RansacSc
 }
 
 
-void RansacScheme::rescale_data(std::vector<std::tuple<Point, Point, Scalar, Scalar>>& pairs_source_target, Scalar avgScale)
+Scalar RansacScheme::compute_scale(RansacScheme::triplet& triplet)
 {
-	for (int k = 0; k < pairs_source_target.size(); k++)
-		std::get<1>(pairs_source_target[k]).pos() *= avgScale;
+	Point ps1, ps2, ps3, pt1, pt2, pt3;
+	Scalar a, b, c, A, B, C;
+	pt1 = std::get<0>(triplet.pair1);
+	ps1 = std::get<1>(triplet.pair1);
+	pt2 = std::get<0>(triplet.pair2);
+	ps2 = std::get<1>(triplet.pair2);
+	pt3 = std::get<0>(triplet.pair3);
+	ps3 = std::get<1>(triplet.pair3);
+
+	a = compute_points_dist(pt1, pt2);
+	b = compute_points_dist(pt2, pt3);
+	c = compute_points_dist(pt1, pt3);
+	A = compute_points_dist(ps1, ps2);
+	B = compute_points_dist(ps2, ps3);
+	C = compute_points_dist(ps1, ps3);
+
+	Scalar scale = (a/A + b/B + c/C) / 3.0;
+	return scale;
 }
 
 
-Eigen::Matrix4d RansacScheme::ransac_algorithm(int nb_iterations, Scalar max_err_scale, Scalar max_err_reg, Scalar max_err_norm, std::vector<std::tuple<Point, Point, Scalar, Scalar>>& pairs_source_target)
+Eigen::Matrix4d RansacScheme::ransac_algorithm(int nb_iterations, Scalar max_err_scale, Scalar max_err_reg, Scalar max_err_norm)
 {
 	int counter = 0;
-	while (counter < nb_iterations)
+	while (counter < nb_iterations && queue_ptr_->size() > 2)
 	{
-		triplet t = pop_triplet();
+		//triplet t = pop_triplet();
+		triplet t = pop_3_farthest_pairs();
+		//triplet t = pick_triplet(8, 9, 23);
+		std::cout << "triplet : " << std::endl;
+		std::cout << std::get<0>(t.pair1).pos().transpose() << " , " << std::get<1>(t.pair1).pos().transpose() << " , " << std::get<2>(t.pair1) << std::endl;
+		std::cout << std::get<0>(t.pair2).pos().transpose() << " , " << std::get<1>(t.pair2).pos().transpose() << " , " << std::get<2>(t.pair2) << std::endl;
+		std::cout << std::get<0>(t.pair3).pos().transpose() << " , " << std::get<1>(t.pair3).pos().transpose() << " , " << std::get<2>(t.pair3) << std::endl;
 		Scalar err_scale = scaleDiff(t).first;
-		std::cout << "error scale " << err_scale <<std::endl;
+		std::cout << "err scale : " << err_scale << std::endl;
 		if (err_scale < max_err_scale)
 		{
-			Scalar avgScale = scaleDiff(t).second;
-			rescale_data(pairs_source_target, avgScale);
+			//Scalar avgScale = scaleDiff(t).second;
 			Eigen::Matrix4d M = compute_rigid_transform(t);
 			
-			if (registrationErr(M, pairs_source_target) < max_err_reg && normalErr(M, pairs_source_target) < max_err_norm)
+			if (registrationErr(M, t) < max_err_reg && normalErr(M, t) < max_err_norm)
 			{
 				queue_copy_ = *queue_ptr_;
 				while (!queue_copy_.empty())
 				{
 					std::tuple<Point, Point, Scalar, Scalar> q = queue_copy_.top();
 					queue_copy_.pop();
-					if (is_valid(q, t, pairs_source_target, max_err_reg, max_err_norm))
+					if (is_valid(q, t, max_err_reg, max_err_norm))
 						return compute_rigid_transform(t, q);
 				}
 			}

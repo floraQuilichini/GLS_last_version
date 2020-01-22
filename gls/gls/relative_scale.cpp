@@ -24,13 +24,24 @@ Scalar Median(std::vector<Scalar>::iterator begin, std::vector<Scalar>::iterator
 }
 
 
-Scalar compute_points_dist(Point& p1, Point& p2)
+Eigen::Array<Scalar, 1, 3> get_max(const Eigen::Array<Scalar, 1, 3>& v1, const Eigen::Array<Scalar, 1, 3>& v2)
 {
-	return sqrt((p1.pos().transpose()*(p1.pos())).sum());
+	Eigen::Array<Scalar, 1, 3> maxArray;
+	for (int i = 0; i < 3; i++)
+		maxArray(i) = std::max(v1(i), v2(i));
+
+	return maxArray;
 }
 
-void update_maxCorr_and_lag(Scalar max_Dsigma, std::multiset<Scalar>& max_corr, Scalar lag, Point point, std::vector<std::pair<Point, Scalar>>& pairs_point_and_scale)
+void update_maxCorr_and_lag(Scalar max_Dsigma, std::multiset<Scalar>& max_corr, Scalar lag, Point point, std::vector<std::tuple<Point, Scalar, bool>>& pairs_point_and_scale, Scalar ratio)
 {
+
+	/*std::cout << "intitial max_corr : " << std::endl;
+	for (auto itt = max_corr.begin(); itt != max_corr.end(); itt++)
+	{
+		std::cout << *itt << std::endl;
+	}*/
+
 	std::multiset<Scalar>::iterator it = max_corr.insert(max_Dsigma);
 	int dist = std::distance(max_corr.begin(), it);
 	max_corr.erase(max_corr.begin());
@@ -43,41 +54,49 @@ void update_maxCorr_and_lag(Scalar max_Dsigma, std::multiset<Scalar>& max_corr, 
 			pairs_point_and_scale[count] = pairs_point_and_scale[count+1];
 			count = count + 1;
 		}
-		pairs_point_and_scale[dist -1] = std::make_pair(point, lag);
+		if (*std::next(max_corr.begin(), dist - 1) >= ratio)
+			pairs_point_and_scale[dist -1] = std::make_tuple(point, lag, true);
+		else
+			pairs_point_and_scale[dist - 1] = std::make_tuple(point, lag, false);
+
 		/*std::cout << "max dsigma : " << max_Dsigma << std::endl;
 		std::cout << "dist : " << dist << std::endl;
 		std::cout << "lag : " << lag << std::endl;*/
 	}
-}
 
-
-std::tuple<Point, Point, Point> find_2_farthest_points(Point p0, std::vector<std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>>>& points_profiles)
-{
-	Scalar dist1 = 0.0;
-	Scalar dist2 = 0.0;
-	Point p1, p2;
-	for (int u = 0; u < points_profiles.size(); u++)
+	/*std::cout << "final max_corr : " << std::endl;
+	for (auto itt = max_corr.begin(); itt != max_corr.end(); itt++)
 	{
-		Point p = points_profiles[u].first;
-		Scalar dist = compute_points_dist(p0, p);
-		if (dist > dist1)
-		{
-			p2 = p1;
-			dist2 = dist1;
-			p1 = p;
-			dist1 = dist;
-		}
-		else
-		{
-			if (dist > dist2)
-			{
-				p2 = p;
-				dist2 = dist;
-			}
-		}
-	}
-	return std::make_tuple(p0, p1, p2);
+		std::cout << *itt << std::endl;
+	}*/
 }
+
+void update_maxCorr_and_lag(Scalar max_Dsigma, std::multiset<Scalar>& max_corr, Scalar lag, int point_index, Point& point, std::vector<std::tuple<int, Point, Scalar, bool>>& pairs_point_and_scale, Scalar ratio)
+{
+	std::multiset<Scalar>::iterator it = max_corr.insert(max_Dsigma);
+	int dist = std::distance(max_corr.begin(), it);
+	max_corr.erase(max_corr.begin());
+
+	if (dist > 0)
+	{
+		int count = 0;
+		while (count < dist - 1)
+		{
+			pairs_point_and_scale[count] = pairs_point_and_scale[count + 1];
+			count = count + 1;
+		}
+		if (*std::next(max_corr.begin(), dist - 1) >= ratio)
+			pairs_point_and_scale[dist - 1] = std::make_tuple(point_index, point, lag, true);
+		else
+			pairs_point_and_scale[dist - 1] = std::make_tuple(point_index, point, lag, false);
+
+	}
+
+
+}
+
+
+
 
 
 Point find_point_matching(std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>> & p_profile, std::vector<std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>>>& pts_profiles, VectorType w, Scalar alpha, Scalar nb_samples)
@@ -228,6 +247,7 @@ std::vector<std::tuple<Point, Point, Scalar>> compute_3_closest_pairs_with_scale
 
 	size_t nb_source_points = source_gls_profiles.size();
 	size_t nb_target_points = target_gls_profiles.size();
+	Scalar ratio_corr = 0.7;
 
 	if (nb_source_points >= nb_target_points)   // if nb_source_points >= nb_target_points, then match target points on source points
 	{
@@ -250,7 +270,7 @@ std::vector<std::tuple<Point, Point, Scalar>> compute_3_closest_pairs_with_scale
 			pt_profiles.col(2) = Eigen::Map<Eigen::ArrayXd>(pt_phi_profile.data(), nb_samples);
 
 			// find, for each target point its closest point in source points and its related estimated scale
-			std::vector<std::pair<Point, Scalar>> pairs_source_and_scale{ std::make_pair(Point(), 0.0),  std::make_pair(Point(), 0.0) , std::make_pair(Point(), 0.0) };
+			std::vector<std::tuple<Point, Scalar, bool>> pairs_source_and_scale{ std::make_tuple(Point(), 0.0, false),  std::make_tuple(Point(), 0.0, false) , std::make_tuple(Point(), 0.0, false) };
 			std::multiset<Scalar> max_corr{ 0.0, 0.0, 0.0 };
 
 			for (std::vector<std::pair<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>>>::iterator it_s = source_gls_profiles.begin(); it_s != source_gls_profiles.end(); ++it_s)
@@ -312,13 +332,13 @@ std::vector<std::tuple<Point, Point, Scalar>> compute_3_closest_pairs_with_scale
 					}
 
 				// compare max_Dsigma to max_corr to know if ps and pt belong to one of the 3 matching pairs
-				update_maxCorr_and_lag(max_Dsigma, max_corr, lag, it_s->first, pairs_source_and_scale);
+				update_maxCorr_and_lag(max_Dsigma, max_corr, lag, it_s->first, pairs_source_and_scale, ratio_corr);
 
 			}
 
 			// store matching target-source matching pairs
 			for (int k =0; k<3; k++ )
-				target_source_scale_matchings.push_back(std::make_tuple(it_t->first, pairs_source_and_scale[k].first, pairs_source_and_scale[k].second));
+				target_source_scale_matchings.push_back(std::make_tuple(it_t->first, std::get<0>(pairs_source_and_scale[k]), std::get<1>(pairs_source_and_scale[k])));
 		}
 
 		return target_source_scale_matchings;
@@ -336,6 +356,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 {
 	size_t nb_source_points = source_gls_profiles.size();
 	size_t nb_target_points = target_gls_profiles.size();
+	Scalar ratio_corr = 0.7;
 
 	if (nb_source_points >= nb_target_points)   // if nb_source_points >= nb_target_points, then match target points on source points
 	{
@@ -392,7 +413,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 			pt_profiles.col(2) = Eigen::Map<Eigen::ArrayXd>(pt_phi_profile.data(), nb_samples);
 
 			// find, for each target point its closest point in source points and its related estimated scale
-			std::vector<std::pair<Point, Scalar>> pairs_source_and_scale{ std::make_pair(Point(), 0.0),  std::make_pair(Point(), 0.0) , std::make_pair(Point(), 0.0) };
+			std::vector<std::tuple<Point, Scalar, bool>> pairs_source_and_scale{ std::make_tuple(Point(), 0.0, false),  std::make_tuple(Point(), 0.0, false) , std::make_tuple(Point(), 0.0, false) };
 			std::multiset<Scalar> max_corr{ 0.0, 0.0, 0.0 };
 			//clock_t tstart, tend;
 			//tstart = clock();
@@ -419,6 +440,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 				Scalar max_Dsigma = 0.0;
 				Scalar lag = 0.0;
 				Eigen::ArrayXd tanh_vec;
+
 				// compute shifts
 					// left shifts (positive ones)
 //#pragma omp parallel for
@@ -497,7 +519,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 				}
 
 				// compare max_Dsigma to max_corr to know if ps and pt belong to one of the 3 matching pairs
-				update_maxCorr_and_lag(max_Dsigma, max_corr, lag, std::get<0>(source_gls_profiles[v]), pairs_source_and_scale);
+				update_maxCorr_and_lag(max_Dsigma, max_corr, lag, std::get<0>(source_gls_profiles[v]), pairs_source_and_scale, ratio_corr);
 
 			}
 
@@ -513,9 +535,9 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 			for (int k = 0; k < 3; k++)
 			{
 				const Point & pt = std::get<0>(target_gls_profiles[u]);
-				Scalar cost_pair = target_priority.find(pt)->second * source_priority.find(pairs_source_and_scale[k].first)->second;
+				Scalar cost_pair = target_priority.find(pt)->second * source_priority.find(std::get<0>(pairs_source_and_scale[k]))->second;
 				//std::cout << "target_cost : " << target_priority.find(pt)->second << ", source_cost : "<< source_priority.find(pairs_source_and_scale[k].first)->second << ", pair cost : "<< cost_pair << std::endl;
-				target_source_matchings.push_back(std::make_tuple(pt, pairs_source_and_scale[k].first, pairs_source_and_scale[k].second, cost_pair));
+				target_source_matchings.push_back(std::make_tuple(pt, std::get<0>(pairs_source_and_scale[k]), std::get<1>(pairs_source_and_scale[k]), cost_pair));
 			}
 
 			//tend = clock()-tstart;
@@ -531,6 +553,377 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 	}
 }
 
+
+
+std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>& source_gls_profiles, std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>& target_gls_profiles, Scalar ratio, int nb_source_samples, int nb_target_samples, VectorType w, Scalar alpha)
+{
+	size_t nb_source_points = source_gls_profiles.size();
+	size_t nb_target_points = target_gls_profiles.size();
+	Scalar ratio_corr = 0.9;
+
+	if (nb_source_points >= nb_target_points)   // if nb_source_points >= nb_target_points, then match target points on source points
+	{
+		std::vector<std::tuple<Point, Point, Scalar, Scalar>> target_source_matchings;
+
+		//compute point priority
+		std::map<Point, Scalar> target_priority, source_priority;
+//#pragma omp parallel for
+		for (int k = 0; k<nb_target_points; k++)
+		{
+			Scalar priority = compute_point_priority(std::get<2>(target_gls_profiles[k]), nb_target_samples, alpha);
+			target_priority.insert(std::make_pair(std::get<0>(target_gls_profiles[k]), priority));
+		}
+
+		//std::cout << "source cost : " << std::endl;
+//#pragma omp parallel for
+		for (int k = 0; k<nb_source_points; k++)
+		{
+			Scalar priority = compute_point_priority(std::get<2>(source_gls_profiles[k]), nb_source_samples, alpha);
+			source_priority.insert(std::make_pair(std::get<0>(source_gls_profiles[k]), priority));
+		}
+
+		// get W vector   -- slower than [w(0), w(1), w(2)].transpose() ?
+		Eigen::Array<Scalar, 1, 3> W;
+		W << w[0], w[1], w[2];
+
+		// search for target->source matching
+//#pragma omp parallel for
+		for (int u = 0; u < target_gls_profiles.size(); ++u)
+		{
+			const std::vector<std::tuple<Scalar, Scalar, Scalar>> & pt_target_profile = std::get<1>(target_gls_profiles[u]);
+			std::vector<Scalar> pt_tau_profile, pt_kappa_profile, pt_phi_profile;
+
+			// get all gls parameter profiles in separate vectors
+			std::transform(std::begin(pt_target_profile), std::end(pt_target_profile), std::back_inserter(pt_tau_profile), [](auto const& tuple) { return std::get<0>(tuple); });
+			std::transform(std::begin(pt_target_profile), std::end(pt_target_profile), std::back_inserter(pt_kappa_profile), [](auto const& tuple) { return std::get<1>(tuple); });
+			std::transform(std::begin(pt_target_profile), std::end(pt_target_profile), std::back_inserter(pt_phi_profile), [](auto const& tuple) { return std::get<2>(tuple); });
+
+			// convert vector values to matrices
+			Eigen::ArrayX3d pt_profiles(nb_target_samples, 3);
+			pt_profiles.col(0) = Eigen::Map<Eigen::ArrayXd>(pt_tau_profile.data(), nb_target_samples);
+			pt_profiles.col(1) = Eigen::Map<Eigen::ArrayXd>(pt_kappa_profile.data(), nb_target_samples);
+			pt_profiles.col(2) = Eigen::Map<Eigen::ArrayXd>(pt_phi_profile.data(), nb_target_samples);
+
+			// find, for each target point its closest point in source points and its related estimated scale
+			std::vector<std::tuple<Point, Scalar, bool>> pairs_source_and_lag{ std::make_tuple(Point(), 0.0, false),  std::make_tuple(Point(), 0.0, false) , std::make_tuple(Point(), 0.0, false) };
+			std::multiset<Scalar> max_corr{ 0.0, 0.0, 0.0 };
+			//clock_t tstart, tend;
+			//tstart = clock();
+//#pragma omp parallel for
+			for (int v = 0; v < source_gls_profiles.size(); ++v)
+			{
+				//std::cout << " p_source = " << std::get<0>(source_gls_profiles[v]).pos().transpose() << std::endl;
+				const std::vector<std::tuple<Scalar, Scalar, Scalar>> & ps_source_profile = std::get<1>(source_gls_profiles[v]);
+				std::vector<Scalar> ps_tau_profile, ps_kappa_profile, ps_phi_profile;
+
+				// get all gls parameter profiles in separate vectors
+				std::transform(std::begin(ps_source_profile), std::end(ps_source_profile), std::back_inserter(ps_tau_profile), [](auto const& tuple) { return std::get<0>(tuple); });
+				std::transform(std::begin(ps_source_profile), std::end(ps_source_profile), std::back_inserter(ps_kappa_profile), [](auto const& tuple) { return std::get<1>(tuple); });
+				std::transform(std::begin(ps_source_profile), std::end(ps_source_profile), std::back_inserter(ps_phi_profile), [](auto const& tuple) { return std::get<2>(tuple); });
+
+				// convert vector values to matrices
+				Eigen::ArrayX3d ps_profiles(nb_source_samples, 3);
+				ps_profiles.col(0) = Eigen::Map<Eigen::ArrayXd>(ps_tau_profile.data(), nb_source_samples);
+				ps_profiles.col(1) = Eigen::Map<Eigen::ArrayXd>(ps_kappa_profile.data(), nb_source_samples);
+				ps_profiles.col(2) = Eigen::Map<Eigen::ArrayXd>(ps_phi_profile.data(), nb_source_samples);
+
+				// find relative scale 
+					// compute shifts
+				std::pair<Scalar, Scalar> pair_shift_Dsigma = compute_optimal_shift(ps_profiles, pt_profiles, W, alpha, ratio);
+
+				//std::cout << "source index : " << v << " , shift : " << pair_shift_Dsigma.first << " , max corr : " << pair_shift_Dsigma.second << std::endl;
+
+					// compare max_Dsigma to max_corr to know if ps and pt belong to one of the 3 matching pairs
+				update_maxCorr_and_lag(pair_shift_Dsigma.second, max_corr, pair_shift_Dsigma.first, std::get<0>(source_gls_profiles[v]), pairs_source_and_lag, ratio_corr);
+			}
+
+			std::string output_filename = "C:\\Registration\\test_gls_algo\\matching_pairs\\source_matching_pairs_unsorted.txt";
+			write_closest_matching_points(std::get<0>(target_gls_profiles[u]), pairs_source_and_lag, output_filename, false);
+
+			// store matching target-source matching pairs with their cost
+			for (int k = 0; k < 3; k++)
+			{
+				const Point & pt = std::get<0>(target_gls_profiles[u]);
+				if (std::get<2>(pairs_source_and_lag[k]))
+				{
+					Scalar cost_pair = target_priority.find(pt)->second * source_priority.find(std::get<0>(pairs_source_and_lag[k]))->second;
+					target_source_matchings.push_back(std::make_tuple(pt, std::get<0>(pairs_source_and_lag[k]), std::get<1>(pairs_source_and_lag[k]), cost_pair));
+				}
+			}
+
+			//tend = clock()-tstart;
+			//cout << "time for computing 3 matching pair : " << (float)tend/CLOCKS_PER_SEC << " second(s)." << endl;
+		}
+
+		return target_source_matchings;
+	}
+
+	else // otherwise match source points on target points
+	{
+		return compute_3_closest_pairs(target_gls_profiles, source_gls_profiles, ratio, nb_target_samples, nb_source_samples, w, alpha);
+	}
+}
+
+
+void set_point_profiles_cost(std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>& point_gls_profiles, std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>>& map_index_point_profiles_cost, int nb_samples, int alpha)
+{
+	size_t nb_points = point_gls_profiles.size();
+
+
+	for (int k = 0; k<nb_points; k++)
+	{
+		// compute cost (ie priority)
+		Scalar priority = compute_point_priority(std::get<2>(point_gls_profiles[k]), nb_samples, alpha);
+
+		// set profiles
+		const std::vector<std::tuple<Scalar, Scalar, Scalar>> & pt_target_profile = std::get<1>(point_gls_profiles[k]);
+		std::vector<Scalar> pt_tau_profile, pt_kappa_profile, pt_phi_profile;
+
+			// get all gls parameter profiles in separate vectors
+		std::transform(std::begin(pt_target_profile), std::end(pt_target_profile), std::back_inserter(pt_tau_profile), [](auto const& tuple) { return std::get<0>(tuple); });
+		std::transform(std::begin(pt_target_profile), std::end(pt_target_profile), std::back_inserter(pt_kappa_profile), [](auto const& tuple) { return std::get<1>(tuple); });
+		std::transform(std::begin(pt_target_profile), std::end(pt_target_profile), std::back_inserter(pt_phi_profile), [](auto const& tuple) { return std::get<2>(tuple); });
+
+			// convert vector values to matrices
+		Eigen::ArrayX3d pt_profiles(nb_samples, 3);
+		pt_profiles.col(0) = Eigen::Map<Eigen::ArrayXd>(pt_tau_profile.data(), nb_samples);
+		pt_profiles.col(1) = Eigen::Map<Eigen::ArrayXd>(pt_kappa_profile.data(), nb_samples);
+		pt_profiles.col(2) = Eigen::Map<Eigen::ArrayXd>(pt_phi_profile.data(), nb_samples);
+
+		//store values in map
+		map_index_point_profiles_cost.insert(std::make_pair(k, std::make_tuple(std::get<0>(point_gls_profiles[k]), pt_profiles, priority)));
+	}
+}
+
+
+std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_symmetric_pairs(std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>& source_gls_profiles, std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>& target_gls_profiles, Scalar ratio, int nb_source_samples, int nb_target_samples, int k, VectorType w, Scalar alpha, bool cross_check)
+{
+	std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>> map_index_source_profiles_cost;
+	std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>> map_index_target_profiles_cost;
+	size_t nb_source_points = source_gls_profiles.size();
+	size_t nb_target_points = target_gls_profiles.size();
+	Scalar ratio_corr = 0.9;
+	Scalar shift_err = 5.0;
+
+	// set points map
+	set_point_profiles_cost(source_gls_profiles, map_index_source_profiles_cost, nb_source_samples, alpha);
+	set_point_profiles_cost(target_gls_profiles, map_index_target_profiles_cost, nb_target_samples, alpha);
+
+	// get W vector   -- slower than [w(0), w(1), w(2)].transpose() ?
+	Eigen::Array<Scalar, 1, 3> W;
+	W << w[0], w[1], w[2];
+
+	std::map<std::pair<int, int>, std::pair<Scalar, bool>> symmetric_matchings;
+
+	// search for target->source matching
+	for (auto it_t  = map_index_target_profiles_cost.begin(); it_t != map_index_target_profiles_cost.end(); it_t++)
+	{
+		// intialize max_corr and  pairs_source_and_lag (for k nearest source points)
+		std::multiset<Scalar> max_corr;
+		std::vector<std::tuple<int, Point, Scalar, bool>> pairs_source_and_lag;
+		for (int i = 0; i < k; i++)
+		{
+			max_corr.insert(0.0);
+			pairs_source_and_lag.push_back(std::make_tuple(-1, Point(), 0.0, false)); 
+		}
+
+		// find, for each target point its closest point in source points and its related estimated shift
+		for (auto it_s = map_index_source_profiles_cost.begin(); it_s != map_index_source_profiles_cost.end(); it_s++)
+		{
+			// compute shifts
+			std::pair<Scalar, Scalar> pair_shift_Dsigma = compute_optimal_shift(std::get<1>(it_s->second), std::get<1>(it_t->second), W, alpha, ratio);
+
+			// compare max_Dsigma to max_corr to know if source belong to one of the k matching pairs
+			update_maxCorr_and_lag(pair_shift_Dsigma.second, max_corr, pair_shift_Dsigma.first, it_s-> first, std::get<0>(it_s->second), pairs_source_and_lag, ratio_corr);
+
+		}
+
+		std::string output_filename = "C:\\Registration\\test_gls_algo\\matching_pairs\\source_matching_pairs_unsorted.txt";
+		write_closest_matching_points(std::get<0>(it_t->second), pairs_source_and_lag, output_filename, false);
+
+		// store matching target-source matching pairs with their cost
+		for (int i = 0; i < k; i++)
+		{
+			if (std::get<3>(pairs_source_and_lag[i]))
+				symmetric_matchings.insert(std::make_pair(std::make_pair(it_t->first, std::get<0>(pairs_source_and_lag[i])), std::make_pair(std::get<2>(pairs_source_and_lag[i]), false)));
+				
+		}
+
+	}
+
+	if (cross_check)
+	{
+		std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>> symmetric_source_pairs;
+		// get source points needed for cross_check
+		for (auto it = symmetric_matchings.begin(); it!= symmetric_matchings.end(); it++)
+				symmetric_source_pairs.insert(*(map_index_source_profiles_cost.find(it->first.second)));
+			
+
+		// search for symmetric source->target matching
+		for (auto it_s = symmetric_source_pairs.begin(); it_s != symmetric_source_pairs.end(); it_s++)
+		{
+			// intialize max_corr and  pairs_target_and_lag (for k nearest source points)
+			std::multiset<Scalar> max_corr;
+			std::vector<std::tuple<int, Point, Scalar, bool>> pairs_target_and_lag;
+			for (int i = 0; i < k; i++)
+			{
+				max_corr.insert(0.0);
+				pairs_target_and_lag.push_back(std::make_tuple(-1, Point(), 0.0, false));
+			}
+
+			// find, for each symmetric source point its closest point in target and its related estimated shift
+			for (auto it_t = map_index_target_profiles_cost.begin(); it_t != map_index_target_profiles_cost.end(); it_t++)
+			{
+				// compute shifts
+				std::pair<Scalar, Scalar> pair_shift_Dsigma = compute_optimal_shift(std::get<1>(it_t->second), std::get<1>(it_s->second), W, alpha, ratio);
+
+				// compare max_Dsigma to max_corr to know if target point belongs to one of the k matching pairs
+				update_maxCorr_and_lag(pair_shift_Dsigma.second, max_corr, pair_shift_Dsigma.first, it_t->first, std::get<0>(it_t->second), pairs_target_and_lag, ratio_corr);
+
+			}
+
+			// check if source->target matchings are compatible with target->source matchings
+			for (int i = 0; i < k; i++)
+			{
+				if (std::get<3>(pairs_target_and_lag[i]))
+				{
+					auto it = symmetric_matchings.find(std::make_pair(std::get<0>(pairs_target_and_lag[i]), it_s->first));
+					if (it != symmetric_matchings.end())
+					{
+						// check if scales values are close
+						Scalar scale_s = std::get<2>(pairs_target_and_lag[i]);
+						Scalar scale_t = std::get<0>(it->second);
+						if (abs(scale_s + scale_t) <= shift_err)
+							(it->second) = std::make_pair((it->second).first, true);	 // indicate that a symmetric matching pair has been found
+					}
+
+				}
+			}
+
+		}
+
+
+		// collect matching pairs
+		int pos = 0;
+		auto it_begin = symmetric_matchings.begin();
+		auto it = symmetric_matchings.begin();
+		while (it != symmetric_matchings.end())
+		{
+			if (!(it->second).second)
+				symmetric_matchings.erase(it);
+			else
+				pos += 1;
+
+			it = std::next(it_begin, pos);
+		}
+
+	}
+
+	std::vector<std::tuple<Point, Point, Scalar, Scalar>> target_source_matchings;
+	for (auto it = symmetric_matchings.begin(); it != symmetric_matchings.end(); it++)
+	{
+		Point & target_point = std::get<0>((map_index_target_profiles_cost.find(it->first.first))->second);
+		Point & source_point = std::get<0>((map_index_source_profiles_cost.find(it->first.second))->second);
+		Scalar lag = it->second.first;
+		Scalar cost = std::get<2>((map_index_target_profiles_cost.find(it->first.first))->second)*std::get<2>((map_index_source_profiles_cost.find(it->first.second))->second);
+		target_source_matchings.push_back(std::make_tuple(target_point, source_point, lag, cost));
+
+	}
+
+	return target_source_matchings;
+		
+}
+
+
+std::pair<Scalar, Scalar> compute_optimal_shift(Eigen::ArrayX3d& source_profiles, Eigen::ArrayX3d& target_profiles, Eigen::Array<Scalar, 1, 3>& W, Scalar alpha, Scalar ratio, bool reverse)
+{
+	int p = source_profiles.rows();
+	int q = target_profiles.rows();
+
+	Scalar opt_Dsigma = 0.0;
+	Scalar opt_shift = 0.0;
+
+	if (p >= q)
+	{
+		int min_shift = -floor((1.0 - ratio)*q);
+		int max_shift = (p - q) + floor((1.0 - ratio)*(Scalar)q);
+
+		for (int shift = min_shift; shift < max_shift + 1; shift ++)
+		{
+			Scalar Dsigma = 0.0;
+			if (shift >= 0 && shift <= p - q)  // regular case
+			{
+				Eigen::ArrayX3d diff(q, 3);
+				diff.block(0, 0, q, 3) = source_profiles.block(shift, 0, q, 3) - target_profiles;
+				//diff.block(0, 0, q, 3) = (1.0/ source_profiles.block(shift, 0, q, 3).abs().colwise().maxCoeff())*source_profiles.block(shift, 0, q, 3) - (1.0/ target_profiles.abs().colwise().maxCoeff())*target_profiles;
+				Eigen::Array<Scalar, 1, 3> den_W = get_max(source_profiles.block(shift, 0, q, 3).abs().colwise().maxCoeff(), target_profiles.abs().colwise().maxCoeff());
+				//den_W(2) = 1.0;
+				W = 1.0 / den_W;
+				//W = 1.0/(diff.abs().colwise().maxCoeff());
+				//std::cout << "W : " << W << std::endl;
+				Eigen::Array<Scalar, Eigen::Dynamic, 3, Eigen::RowMajor> diff2 = (diff*diff).rowwise()*W;
+				Eigen::Array<Scalar, Eigen::Dynamic, 1> diss_over_scales = diff2.rowwise().sum();
+				Eigen::ArrayXd sigma = 1.0 - (alpha*diss_over_scales).tanh();
+				Dsigma = 1.0 / (Scalar)(q) * sigma.sum();
+				//std::cout << "Dsigma : " << Dsigma << std::endl;
+			}
+			else  // extremity case
+			{
+				if (shift < 0)  // left extremity
+				{
+					Eigen::ArrayX3d diff(q - abs(shift), 3);
+					diff.block(0, 0, q - abs(shift), 3) = source_profiles.block(0, 0, q - abs(shift), 3) - target_profiles.block(abs(shift), 0, q - abs(shift), 3);
+					//diff.block(0, 0, q - abs(shift), 3) = (1.0/ source_profiles.block(0, 0, q - abs(shift), 3).abs().colwise().maxCoeff())*source_profiles.block(0, 0, q - abs(shift), 3) - (1.0/ target_profiles.block(abs(shift), 0, q - abs(shift), 3).abs().colwise().maxCoeff())*target_profiles.block(abs(shift), 0, q - abs(shift), 3);
+					Eigen::Array<Scalar, 1, 3> den_W = get_max(source_profiles.block(0, 0, q - abs(shift), 3).abs().colwise().maxCoeff(), target_profiles.block(abs(shift), 0, q - abs(shift), 3).abs().colwise().maxCoeff());
+					//den_W(2) = 1.0;
+					W = 1.0 / den_W;
+					//W = 1.0 / (diff.abs().colwise().maxCoeff());
+					//std::cout << "W : " << W << std::endl;
+					Eigen::Array<Scalar, Eigen::Dynamic, 3, Eigen::RowMajor> diff2 = (diff*diff).rowwise()*W;
+					Eigen::Array<Scalar, Eigen::Dynamic, 1> diss_over_scales = (diff2).rowwise().sum();
+					Eigen::ArrayXd sigma = 1.0 - (alpha*diss_over_scales).tanh();
+					Dsigma = 1.0 / (Scalar)(q - abs(shift)) * sigma.sum();
+					//std::cout << "Dsigma : " << Dsigma << std::endl;
+				}
+
+				else  // right extremity
+				{
+					Eigen::ArrayX3d diff(p - shift, 3);
+					diff.block(0, 0, p - shift, 3) = source_profiles.block(shift, 0, p - shift, 3) - target_profiles.block(0, 0, p - shift, 3);
+					//diff.block(0, 0, q - abs(shift), 3) = (1.0/ source_profiles.block(shift, 0, p - shift, 3).abs().colwise().maxCoeff())*source_profiles.block(shift, 0, p - shift, 3) - (1.0 / target_profiles.block(0, 0, p - shift, 3).abs().colwise().maxCoeff())*target_profiles.block(0, 0, p - shift, 3);
+					Eigen::Array<Scalar, 1, 3> den_W = get_max(source_profiles.block(shift, 0, p - shift, 3).abs().colwise().maxCoeff(), target_profiles.block(0, 0, p - shift, 3).abs().colwise().maxCoeff());
+					//den_W(2) = 1.0;
+					W = 1.0 / den_W;
+					//W = 1.0/ (diff.abs().colwise().maxCoeff());
+					//std::cout << "W : " << W << std::endl;
+					Eigen::Array<Scalar, Eigen::Dynamic, 3, Eigen::RowMajor> diff2 = (diff*diff).rowwise()*W;
+					Eigen::Array<Scalar, Eigen::Dynamic, 1> diss_over_scales = (diff2).rowwise().sum();
+					Eigen::ArrayXd sigma = 1.0 - (alpha*diss_over_scales).tanh();
+					Dsigma = 1.0 / (Scalar)(p - shift) * sigma.sum();
+					//std::cout << "Dsigma : " << Dsigma << std::endl;
+				}
+			}
+
+			if (Dsigma > opt_Dsigma)
+			{
+				opt_Dsigma = Dsigma;
+				opt_shift = shift;
+			}
+		}
+
+		if (reverse)
+			opt_shift = -opt_shift;
+
+		return std::make_pair(opt_shift, opt_Dsigma);
+
+	}
+
+	else
+	{
+		return compute_optimal_shift(target_profiles, source_profiles, W, alpha, ratio, true);
+	}
+
+}
 
 
 

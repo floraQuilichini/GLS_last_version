@@ -377,8 +377,8 @@ int main(int argc, char** argv)
 	}
 
 	std::string descriptors_source_filename, descriptors_target_filename, transform_filename;
-	Scalar min_scale, max_scale, base;
-	int nb_samples, nb_source_points, nb_target_points;
+	Scalar min_source_scale, max_source_scale, min_target_scale, max_target_scale, base;
+	int nb_source_samples, nb_target_samples, nb_source_points, nb_target_points;
 
 	descriptors_source_filename = argv[1];
 	descriptors_target_filename = argv[2];
@@ -387,26 +387,28 @@ int main(int argc, char** argv)
 
 	// get descriptors and headers 
 	std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>> source_descriptors_geom_var, target_descriptors_geom_var;
-	read_descriptors_text_file(descriptors_source_filename, source_descriptors_geom_var, nb_source_points, nb_samples, min_scale, max_scale, base);
-	read_descriptors_text_file(descriptors_target_filename, target_descriptors_geom_var, nb_target_points, nb_samples, min_scale, max_scale, base);
+	read_descriptors_text_file(descriptors_source_filename, source_descriptors_geom_var, nb_source_points, nb_source_samples, min_source_scale, max_source_scale, base);
+	read_descriptors_text_file(descriptors_target_filename, target_descriptors_geom_var, nb_target_points, nb_target_samples, min_target_scale, max_target_scale, base);
 	
-	
+
 	// compute matching pairs with priority
 	VectorType w = Eigen::Vector3d::Ones();
-	Scalar ratio = 0.1;
-	std::vector<std::tuple<Point, Point, Scalar, Scalar>> three_closest_pairs = compute_3_closest_pairs(source_descriptors_geom_var, target_descriptors_geom_var, ratio, nb_samples, w);
-
+	Scalar ratio = 0.2;
+	//std::vector<std::tuple<Point, Point, Scalar, Scalar>> three_closest_pairs = compute_3_closest_pairs(source_descriptors_geom_var, target_descriptors_geom_var, ratio, nb_source_samples, nb_target_samples, w, 4.0);
+	std::vector<std::tuple<Point, Point, Scalar, Scalar>> symmetric_pairs = compute_symmetric_pairs(source_descriptors_geom_var, target_descriptors_geom_var, ratio, nb_source_samples, nb_target_samples, 3, w, 4.0, true);
+	
 	// apply Ransac scheme
 	int nb_iterations = 1000;
 	Scalar max_err_scale = 0.2;
-	Scalar max_err_reg = 0.4;  // error reg is big ( err > 5 & err < 13)
+	Scalar max_err_reg = 0.4; 
 	Scalar max_err_norm = 0.35;
-	pair_priority_queue queue(three_closest_pairs);
+	//pair_priority_queue queue(three_closest_pairs, min_source_scale, min_target_scale, base);
+	pair_priority_queue queue(symmetric_pairs, min_source_scale, min_target_scale, base);
 	//queue.display_queue();
 	std::string output_filename = "C:\\Registration\\test_gls_algo\\matching_pairs\\source_matching_pairs.txt";
 	write_closest_matching_points(queue, output_filename, false);
 	RansacScheme ransac(queue);
-	Eigen::Matrix4d transform = ransac.ransac_algorithm(nb_iterations, max_err_scale, max_err_reg, max_err_norm, three_closest_pairs);
+	Eigen::Matrix4d transform = ransac.ransac_algorithm(nb_iterations, max_err_scale, max_err_reg, max_err_norm);
 
 	//std::cout << "transform : " << transform << std::endl;
 

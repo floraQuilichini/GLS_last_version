@@ -378,7 +378,7 @@ void write_matrix_transform(Eigen::Matrix4d& transform, std::string& output_file
 }
 
 
-void write_closest_matching_points(Point& target_point, std::vector<std::pair<Point, Scalar>>& pairs_source_and_scale, std::string& output_filename, bool new_file)
+void write_closest_matching_points(Point& target_point, std::vector<std::tuple<Point, Scalar, bool>>& pairs_source_and_scale, std::string& output_filename, bool new_file)
 {
 	std::ofstream output_file;
 	if (new_file)
@@ -387,7 +387,36 @@ void write_closest_matching_points(Point& target_point, std::vector<std::pair<Po
 		output_file.open(output_filename, ios::app);
 
 	for (int i = 0; i < pairs_source_and_scale.size(); i++)
-		output_file << target_point.pos().transpose() << " " << pairs_source_and_scale[i].first.pos().transpose() << " " << pairs_source_and_scale[i].second << std::endl;
+		output_file << target_point.pos().transpose() << " " << std::get<0>(pairs_source_and_scale[i]).pos().transpose() << " " << std::get<1>(pairs_source_and_scale[i]) << " " << std::get<2>(pairs_source_and_scale[i]) << std::endl;
+
+	output_file.close();
+}
+
+void write_closest_matching_points(const Point& target_point, std::vector<std::tuple<Point, Scalar, bool>>& pairs_source_and_scale, std::string& output_filename, bool new_file)
+{
+	std::ofstream output_file;
+	if (new_file)
+		output_file.open(output_filename, ios::out);
+	else
+		output_file.open(output_filename, ios::app);
+
+	for (int i = 0; i < pairs_source_and_scale.size(); i++)
+		output_file << target_point.pos().transpose() << " " << std::get<0>(pairs_source_and_scale[i]).pos().transpose() << " " << std::get<1>(pairs_source_and_scale[i]) << " " << std::get<2>(pairs_source_and_scale[i]) << std::endl;
+
+	output_file.close();
+}
+
+
+void write_closest_matching_points(Point& target_point, std::vector<std::tuple<int, Point, Scalar, bool>>& pairs_source_and_scale, std::string& output_filename, bool new_file)
+{
+	std::ofstream output_file;
+	if (new_file)
+		output_file.open(output_filename, ios::out);
+	else
+		output_file.open(output_filename, ios::app);
+
+	for (int i = 0; i < pairs_source_and_scale.size(); i++)
+		output_file << target_point.pos().transpose() << " " << std::get<1>(pairs_source_and_scale[i]).pos().transpose() << " " << std::get<2>(pairs_source_and_scale[i]) << " " << std::get<3>(pairs_source_and_scale[i]) << std::endl;
 
 	output_file.close();
 }

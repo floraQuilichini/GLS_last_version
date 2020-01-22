@@ -23,7 +23,7 @@ public:
 	MULTIARCH inline VectorType& normal() { return m_normal; }
 	bool inline operator==(const Point& p)
 	{
-		return (this->pos().x() == p.pos().x()) && (this->pos().x() == p.pos().x()) && (this->pos().x() == p.pos().x());
+		return (this->pos().x() == p.pos().x()) && (this->pos().y() == p.pos().y()) && (this->pos().z() == p.pos().z());
 	}
 
 	bool inline operator<(const Point& p) const

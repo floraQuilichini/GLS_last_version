@@ -33,6 +33,10 @@ void write_matching_points(std::string output_filename, std::vector<std::pair<Po
 
 void write_matrix_transform(Eigen::Matrix4d& transform, std::string& output_filename);
 
-void write_closest_matching_points(Point& target_point, std::vector<std::pair<Point, Scalar>>& pairs_source_and_scale, std::string& output_filename, bool new_file = false);
+void write_closest_matching_points(Point& target_point, std::vector<std::tuple<Point, Scalar, bool>>& pairs_source_and_scale, std::string& output_filename, bool new_file = false);
+
+void write_closest_matching_points(const Point& target_point, std::vector<std::tuple<Point, Scalar, bool>>& pairs_source_and_scale, std::string& output_filename, bool new_file = false);
+
+void write_closest_matching_points(Point& target_point, std::vector<std::tuple<int, Point, Scalar, bool>>& pairs_source_and_scale, std::string& output_filename, bool new_file = false);
 
 void write_closest_matching_points(pair_priority_queue& queue, std::string& output_filename, bool new_file = false);

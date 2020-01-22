@@ -3,6 +3,7 @@ C:\Registration\test_multiscale\mesh\bunny.ply  C:\Registration\test_multiscale\
 ou, avec calcul de la variation géométrique
 C:\Registration\test_multiscale\mesh\bunny.ply  C:\Registration\test_multiscale\mesh\bunny_source_interest_point.ply  0.1292 4.9115 500 C:\Registration\test_multiscale\output\bunny_profiles.txt 1
 C:\Registration\test_gls_algo\meshes\small_meshes_for_test\larger_rescaling\bunny_simp.ply  C:\Registration\test_gls_algo\meshes\small_meshes_for_test\larger_rescaling\bunny_simp_vsa.ply  4.2 420 300 C:\Registration\test_gls_algo\matching_files\small_meshes_matching_files\temp\bunny_simp_profiles.txt 1
+C:\Registration\test_gls_algo\meshes\small_meshes_for_test\larger_rescaling\bunny_simp_rX45_t0-4-3_s0.5_downsampled.ply C:\Registration\test_gls_algo\meshes\small_meshes_for_test\larger_rescaling\bunny_simp_rX45_t0-4-3_s0.5_downsampled.ply 1.3106 6.3998 81 C:\Registration\test_gls_algo\matching_files\small_meshes_matching_files\temp\bunny_simp_rX45_t0-4-3_s0.5_downsampled_profiles.txt 1
 
 second main : estimate relative scale
 C:\Registration\test_multiscale\output\gls_scale_estimation\bunny_vsa_complete_profiles.txt  C:\Registration\test_multiscale\output\gls_scale_estimation\bunny_downsampled_vsa_complete_profiles.txt  C:\Registration\test_multiscale\output\gls_scale_estimation\bunny_vsa_bunny_downsampled_vsa_matching.txt
