@@ -37,6 +37,6 @@ void write_closest_matching_points(Point& target_point, std::vector<std::tuple<P
 
 void write_closest_matching_points(const Point& target_point, std::vector<std::tuple<Point, Scalar, bool>>& pairs_source_and_scale, std::string& output_filename, bool new_file = false);
 
-void write_closest_matching_points(Point& target_point, std::vector<std::tuple<int, Point, Scalar, bool>>& pairs_source_and_scale, std::string& output_filename, bool new_file = false);
+void write_closest_matching_points(Point& target_point, std::vector<std::tuple<int, Point, Scalar, Scalar, bool>>& pairs_source_lag_and_corr, std::string& output_filename, bool new_file = false);
 
 void write_closest_matching_points(pair_priority_queue& queue, std::string& output_filename, bool new_file = false);

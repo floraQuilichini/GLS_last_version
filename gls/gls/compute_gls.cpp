@@ -395,12 +395,12 @@ int main(int argc, char** argv)
 	VectorType w = Eigen::Vector3d::Ones();
 	Scalar ratio = 0.2;
 	//std::vector<std::tuple<Point, Point, Scalar, Scalar>> three_closest_pairs = compute_3_closest_pairs(source_descriptors_geom_var, target_descriptors_geom_var, ratio, nb_source_samples, nb_target_samples, w, 4.0);
-	std::vector<std::tuple<Point, Point, Scalar, Scalar>> symmetric_pairs = compute_symmetric_pairs(source_descriptors_geom_var, target_descriptors_geom_var, ratio, nb_source_samples, nb_target_samples, 3, w, 4.0, true);
+	std::vector<std::tuple<Point, Point, Scalar, Scalar, Scalar>> symmetric_pairs = compute_symmetric_pairs(source_descriptors_geom_var, target_descriptors_geom_var, ratio, nb_source_samples, nb_target_samples, 3, w, 4.0, false);
 	
 	// apply Ransac scheme
 	int nb_iterations = 1000;
 	Scalar max_err_scale = 0.2;
-	Scalar max_err_reg = 0.4; 
+	Scalar max_err_reg = 0.8; 
 	Scalar max_err_norm = 0.35;
 	//pair_priority_queue queue(three_closest_pairs, min_source_scale, min_target_scale, base);
 	pair_priority_queue queue(symmetric_pairs, min_source_scale, min_target_scale, base);

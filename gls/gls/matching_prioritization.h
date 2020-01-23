@@ -25,7 +25,8 @@ public:
 	pair_priority_queue() {};
 	pair_priority_queue(const std::tuple<Point, Point, Scalar, Scalar>& pair);
 	pair_priority_queue(const std::vector<std::tuple<Point, Point, Scalar, Scalar>>& vector_pair);
-	pair_priority_queue::pair_priority_queue(const std::vector<std::tuple<Point, Point, Scalar, Scalar>>& vec_pair, Scalar min_source_scale, Scalar min_target_scale, Scalar base);
+	pair_priority_queue(const std::vector<std::tuple<Point, Point, Scalar, Scalar>>& vec_pair, Scalar min_source_scale, Scalar min_target_scale, Scalar base);
+	pair_priority_queue(const std::vector<std::tuple<Point, Point, Scalar, Scalar, Scalar>>& vec_pair, Scalar min_source_scale, Scalar min_target_scale, Scalar base);
 	void add_pair(const std::tuple<Point, Point, Scalar, Scalar>& pair);
 	void empty_queue();
 	void display_queue();

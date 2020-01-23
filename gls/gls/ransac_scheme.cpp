@@ -13,11 +13,11 @@
 
 Scalar RansacScheme::compute_points_dist(Point& p1, Point& p2)
 {
-	return sqrt((p1.pos().transpose()*(p1.pos())).sum());
+	return sqrt(((p1.pos().transpose() - p2.pos().transpose())*(p1.pos() - p2.pos())).sum());
 }
 
 
-void RansacScheme::find_2_farthest_pairs(RansacScheme::triplet& triplet)
+/*void RansacScheme::find_2_farthest_pairs(RansacScheme::triplet& triplet)
 {
 	Scalar dist2 = 0.0;
 	Scalar dist3 = 0.0;
@@ -50,6 +50,123 @@ void RansacScheme::find_2_farthest_pairs(RansacScheme::triplet& triplet)
 			}
 		}
 	}
+
+}*/
+
+void RansacScheme::find_2_farthest_pairs(RansacScheme::triplet& triplet)
+{
+	// get second pair
+	triplet.pair2 = find_farthest_pair(triplet.pair1);
+
+	// get third pair
+	triplet.pair3 = find_pair_to_maximize_triangle_surface(triplet.pair1, triplet.pair2);
+
+}
+
+
+
+std::tuple<Point, Point, Scalar, Scalar> RansacScheme::find_farthest_pair(std::tuple<Point, Point, Scalar, Scalar>& pair)
+{
+	Scalar dist_ref = 0.0;
+	std::tuple<Point, Point, Scalar, Scalar> farthest_pair;
+	Point p = std::get<0>(pair);
+	queue_copy_ = *queue_ptr_;
+
+	while (!queue_copy_.empty())
+	{
+		std::tuple<Point, Point, Scalar, Scalar> query_pair = queue_copy_.top();
+		queue_copy_.pop();
+		Point p_query = std::get<0>(query_pair);
+		Scalar dist = compute_points_dist(p, p_query);
+		if (dist > dist_ref && !(std::get<1>(query_pair).pos() == std::get<1>(pair).pos()))
+		{
+			dist_ref = dist_ref;
+			farthest_pair = query_pair;
+		}
+	}
+
+	return farthest_pair;
+}
+
+std::tuple<Point, Point, Scalar, Scalar> RansacScheme::find_pair_to_maximize_triangle_surface(std::tuple<Point, Point, Scalar, Scalar>& pair1, std::tuple<Point, Point, Scalar, Scalar>& pair2)
+{
+	Point p1 = std::get<0>(pair1);
+	Point p2 = std::get<0>(pair2);
+	std::tuple<Point, Point, Scalar, Scalar> pair3;
+	Scalar max_area = 0.0;
+	Scalar a = compute_points_dist(p1, p2);
+	queue_copy_ = *queue_ptr_;
+
+	while (!queue_copy_.empty())
+	{
+		std::tuple<Point, Point, Scalar, Scalar> pair = queue_copy_.top();
+		queue_copy_.pop();
+		if (!(std::get<1>(pair1).pos() == std::get<1>(pair).pos() || std::get<1>(pair2).pos() == std::get<1>(pair).pos()))
+		{
+			// compute area of the triangle formed by the point std::get<1>(pair1), std::get<1>(pair2), std::get<1>(pair)
+			Scalar b = compute_points_dist(p1, std::get<0>(pair));
+			Scalar c = compute_points_dist(p2, std::get<0>(pair));
+			Scalar area = sqrt((a+b+c)*(b+c-a)*(a+c-b)*(a+b-c))/4.0;
+			if (area > max_area)
+			{
+				max_area = area;
+				pair3 = pair;
+			}
+		}
+
+	}
+
+	return pair3;
+
+}
+
+
+
+void RansacScheme::find_2_farthest_pairs_with_respect_to_geomVar(RansacScheme::triplet& triplet, Scalar bbox_diag_ratio)
+{
+	queue_copy_ = *queue_ptr_;
+
+	// get second pair
+	while (!queue_copy_.empty())
+	{
+		std::tuple<Point, Point, Scalar, Scalar> pair = queue_copy_.top();
+		queue_copy_.pop();
+		if (compute_points_dist(std::get<0>(triplet.pair1), std::get<0>(pair)) > bbox_diag_ratio && !(std::get<1>(triplet.pair1).pos() == std::get<1>(pair).pos()))
+		{
+			triplet.pair2 = pair;
+			break;
+		}
+	}
+		// empty queue
+	while (!queue_copy_.empty())
+		queue_copy_.pop();
+
+
+	// get third pair
+	queue_copy_ = *queue_ptr_;
+	Scalar a = compute_points_dist(std::get<0>(triplet.pair1), std::get<0>(triplet.pair2));
+	Scalar max_area = sqrt(3.0) / 4.0* bbox_diag_ratio*bbox_diag_ratio;
+	while (!queue_copy_.empty())
+	{
+		std::tuple<Point, Point, Scalar, Scalar> pair = queue_copy_.top();
+		queue_copy_.pop();
+		if (!(std::get<1>(triplet.pair1).pos() == std::get<1>(pair).pos() || std::get<1>(triplet.pair2).pos() == std::get<1>(pair).pos()))
+		{
+			// compute area of the triangle formed by the point std::get<1>(pair1), std::get<1>(pair2), std::get<1>(pair)
+			Scalar b = compute_points_dist(std::get<0>(triplet.pair1), std::get<0>(pair));
+			Scalar c = compute_points_dist(std::get<0>(triplet.pair2), std::get<0>(pair));
+			Scalar area = sqrt((a + b + c)*(b + c - a)*(a + c - b)*(a + b - c)) / 4.0;
+			if (area > max_area)
+			{
+				triplet.pair3 = pair;
+				break;
+			}
+		}
+	}
+
+	// empty queue
+	while (!queue_copy_.empty())
+		queue_copy_.pop();
 
 }
 
@@ -144,6 +261,24 @@ RansacScheme::triplet RansacScheme::pop_3_farthest_pairs()
 	
 	return triplet;
 }
+
+
+RansacScheme::triplet RansacScheme::pop_3_farthest_pairs(Scalar bbox_diag_ratio)
+{
+	RansacScheme::triplet triplet;
+
+	if (queue_ptr_->size() > 2)
+	{
+		triplet.pair1 = queue_ptr_->top();
+		queue_ptr_->pop();
+
+		find_2_farthest_pairs_with_respect_to_geomVar(triplet, bbox_diag_ratio);
+	}
+
+	return triplet;
+}
+
+
 
 std::pair<Scalar, Scalar> RansacScheme::scaleDiff(RansacScheme::triplet t)
 {
@@ -363,10 +498,11 @@ Scalar RansacScheme::compute_scale(RansacScheme::triplet& triplet)
 Eigen::Matrix4d RansacScheme::ransac_algorithm(int nb_iterations, Scalar max_err_scale, Scalar max_err_reg, Scalar max_err_norm)
 {
 	int counter = 0;
+	Scalar bbox_diag_ratio = 14.0;
 	while (counter < nb_iterations && queue_ptr_->size() > 2)
 	{
 		//triplet t = pop_triplet();
-		triplet t = pop_3_farthest_pairs();
+		triplet t = pop_3_farthest_pairs(bbox_diag_ratio);
 		//triplet t = pick_triplet(8, 9, 23);
 		std::cout << "triplet : " << std::endl;
 		std::cout << std::get<0>(t.pair1).pos().transpose() << " , " << std::get<1>(t.pair1).pos().transpose() << " , " << std::get<2>(t.pair1) << std::endl;

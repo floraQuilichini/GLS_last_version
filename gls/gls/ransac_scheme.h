@@ -22,8 +22,12 @@ public:
 	};
 	Scalar compute_points_dist(Point& p1, Point& p2);
 	void find_2_farthest_pairs(triplet& triplet);
+	void find_2_farthest_pairs_with_respect_to_geomVar(triplet& triplet, Scalar bbox_diag_ratio);
+	std::tuple<Point, Point, Scalar, Scalar> find_pair_to_maximize_triangle_surface(std::tuple<Point, Point, Scalar, Scalar>& pair1, std::tuple<Point, Point, Scalar, Scalar>& pair2);
+	std::tuple<Point, Point, Scalar, Scalar> find_farthest_pair(std::tuple<Point, Point, Scalar, Scalar>& pair);
 	triplet pop_triplet();
 	triplet pop_3_farthest_pairs();
+	triplet pop_3_farthest_pairs(Scalar bbox_diag_ratio);
 	triplet pick_triplet(const int ind1, const int ind2, const int ind3);
 	std::pair<Scalar, Scalar> scaleDiff(triplet t);
 	Scalar compute_scale(triplet& triplet);

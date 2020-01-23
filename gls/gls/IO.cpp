@@ -407,7 +407,7 @@ void write_closest_matching_points(const Point& target_point, std::vector<std::t
 }
 
 
-void write_closest_matching_points(Point& target_point, std::vector<std::tuple<int, Point, Scalar, bool>>& pairs_source_and_scale, std::string& output_filename, bool new_file)
+void write_closest_matching_points(Point& target_point, std::vector<std::tuple<int, Point, Scalar, Scalar, bool>>& pairs_source_lag_and_corr, std::string& output_filename, bool new_file)
 {
 	std::ofstream output_file;
 	if (new_file)
@@ -415,8 +415,8 @@ void write_closest_matching_points(Point& target_point, std::vector<std::tuple<i
 	else
 		output_file.open(output_filename, ios::app);
 
-	for (int i = 0; i < pairs_source_and_scale.size(); i++)
-		output_file << target_point.pos().transpose() << " " << std::get<1>(pairs_source_and_scale[i]).pos().transpose() << " " << std::get<2>(pairs_source_and_scale[i]) << " " << std::get<3>(pairs_source_and_scale[i]) << std::endl;
+	for (int i = 0; i < pairs_source_lag_and_corr.size(); i++)
+		output_file << target_point.pos().transpose() << " " << std::get<1>(pairs_source_lag_and_corr[i]).pos().transpose() << " " << std::get<2>(pairs_source_lag_and_corr[i]) << " " << std::get<4>(pairs_source_lag_and_corr[i]) << std::endl;
 
 	output_file.close();
 }

@@ -71,7 +71,7 @@ void update_maxCorr_and_lag(Scalar max_Dsigma, std::multiset<Scalar>& max_corr, 
 	}*/
 }
 
-void update_maxCorr_and_lag(Scalar max_Dsigma, std::multiset<Scalar>& max_corr, Scalar lag, int point_index, Point& point, std::vector<std::tuple<int, Point, Scalar, bool>>& pairs_point_and_scale, Scalar ratio)
+void update_maxCorr_and_lag(Scalar max_Dsigma, std::multiset<Scalar>& max_corr, Scalar lag, int point_index, Point& point, std::vector<std::tuple<int, Point, Scalar, Scalar, bool>>& pairs_point_lag_and_corr, Scalar ratio)
 {
 	std::multiset<Scalar>::iterator it = max_corr.insert(max_Dsigma);
 	int dist = std::distance(max_corr.begin(), it);
@@ -82,13 +82,13 @@ void update_maxCorr_and_lag(Scalar max_Dsigma, std::multiset<Scalar>& max_corr, 
 		int count = 0;
 		while (count < dist - 1)
 		{
-			pairs_point_and_scale[count] = pairs_point_and_scale[count + 1];
+			pairs_point_lag_and_corr[count] = pairs_point_lag_and_corr[count + 1];
 			count = count + 1;
 		}
 		if (*std::next(max_corr.begin(), dist - 1) >= ratio)
-			pairs_point_and_scale[dist - 1] = std::make_tuple(point_index, point, lag, true);
+			pairs_point_lag_and_corr[dist - 1] = std::make_tuple(point_index, point, lag, max_Dsigma, true);
 		else
-			pairs_point_and_scale[dist - 1] = std::make_tuple(point_index, point, lag, false);
+			pairs_point_lag_and_corr[dist - 1] = std::make_tuple(point_index, point, lag, max_Dsigma, false);
 
 	}
 
@@ -696,7 +696,7 @@ void set_point_profiles_cost(std::vector<std::tuple<Point, std::vector<std::tupl
 }
 
 
-std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_symmetric_pairs(std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>& source_gls_profiles, std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>& target_gls_profiles, Scalar ratio, int nb_source_samples, int nb_target_samples, int k, VectorType w, Scalar alpha, bool cross_check)
+std::vector<std::tuple<Point, Point, Scalar, Scalar, Scalar>> compute_symmetric_pairs(std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>& source_gls_profiles, std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>& target_gls_profiles, Scalar ratio, int nb_source_samples, int nb_target_samples, int k, VectorType w, Scalar alpha, bool cross_check)
 {
 	std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>> map_index_source_profiles_cost;
 	std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>> map_index_target_profiles_cost;
@@ -713,18 +713,18 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_symmetric_pairs(st
 	Eigen::Array<Scalar, 1, 3> W;
 	W << w[0], w[1], w[2];
 
-	std::map<std::pair<int, int>, std::pair<Scalar, bool>> symmetric_matchings;
+	std::map<std::pair<int, int>, std::tuple<Scalar, Scalar, bool>> symmetric_matchings;
 
 	// search for target->source matching
 	for (auto it_t  = map_index_target_profiles_cost.begin(); it_t != map_index_target_profiles_cost.end(); it_t++)
 	{
 		// intialize max_corr and  pairs_source_and_lag (for k nearest source points)
 		std::multiset<Scalar> max_corr;
-		std::vector<std::tuple<int, Point, Scalar, bool>> pairs_source_and_lag;
+		std::vector<std::tuple<int, Point, Scalar, Scalar, bool>> pairs_source_lag_and_corr;
 		for (int i = 0; i < k; i++)
 		{
 			max_corr.insert(0.0);
-			pairs_source_and_lag.push_back(std::make_tuple(-1, Point(), 0.0, false)); 
+			pairs_source_lag_and_corr.push_back(std::make_tuple(-1, Point(), 0.0, 0.0, false)); 
 		}
 
 		// find, for each target point its closest point in source points and its related estimated shift
@@ -734,18 +734,18 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_symmetric_pairs(st
 			std::pair<Scalar, Scalar> pair_shift_Dsigma = compute_optimal_shift(std::get<1>(it_s->second), std::get<1>(it_t->second), W, alpha, ratio);
 
 			// compare max_Dsigma to max_corr to know if source belong to one of the k matching pairs
-			update_maxCorr_and_lag(pair_shift_Dsigma.second, max_corr, pair_shift_Dsigma.first, it_s-> first, std::get<0>(it_s->second), pairs_source_and_lag, ratio_corr);
+			update_maxCorr_and_lag(pair_shift_Dsigma.second, max_corr, pair_shift_Dsigma.first, it_s-> first, std::get<0>(it_s->second), pairs_source_lag_and_corr, ratio_corr);
 
 		}
 
 		std::string output_filename = "C:\\Registration\\test_gls_algo\\matching_pairs\\source_matching_pairs_unsorted.txt";
-		write_closest_matching_points(std::get<0>(it_t->second), pairs_source_and_lag, output_filename, false);
+		write_closest_matching_points(std::get<0>(it_t->second), pairs_source_lag_and_corr, output_filename, false);
 
 		// store matching target-source matching pairs with their cost
 		for (int i = 0; i < k; i++)
 		{
-			if (std::get<3>(pairs_source_and_lag[i]))
-				symmetric_matchings.insert(std::make_pair(std::make_pair(it_t->first, std::get<0>(pairs_source_and_lag[i])), std::make_pair(std::get<2>(pairs_source_and_lag[i]), false)));
+			if (std::get<4>(pairs_source_lag_and_corr[i]))
+				symmetric_matchings.insert(std::make_pair(std::make_pair(it_t->first, std::get<0>(pairs_source_lag_and_corr[i])), std::make_tuple(std::get<2>(pairs_source_lag_and_corr[i]), std::get<3>(pairs_source_lag_and_corr[i]), false)));
 				
 		}
 
@@ -764,11 +764,11 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_symmetric_pairs(st
 		{
 			// intialize max_corr and  pairs_target_and_lag (for k nearest source points)
 			std::multiset<Scalar> max_corr;
-			std::vector<std::tuple<int, Point, Scalar, bool>> pairs_target_and_lag;
+			std::vector<std::tuple<int, Point, Scalar, Scalar, bool>> pairs_target_lag_and_corr;
 			for (int i = 0; i < k; i++)
 			{
 				max_corr.insert(0.0);
-				pairs_target_and_lag.push_back(std::make_tuple(-1, Point(), 0.0, false));
+				pairs_target_lag_and_corr.push_back(std::make_tuple(-1, Point(), 0.0, 0.0, false));
 			}
 
 			// find, for each symmetric source point its closest point in target and its related estimated shift
@@ -778,23 +778,23 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_symmetric_pairs(st
 				std::pair<Scalar, Scalar> pair_shift_Dsigma = compute_optimal_shift(std::get<1>(it_t->second), std::get<1>(it_s->second), W, alpha, ratio);
 
 				// compare max_Dsigma to max_corr to know if target point belongs to one of the k matching pairs
-				update_maxCorr_and_lag(pair_shift_Dsigma.second, max_corr, pair_shift_Dsigma.first, it_t->first, std::get<0>(it_t->second), pairs_target_and_lag, ratio_corr);
+				update_maxCorr_and_lag(pair_shift_Dsigma.second, max_corr, pair_shift_Dsigma.first, it_t->first, std::get<0>(it_t->second), pairs_target_lag_and_corr, ratio_corr);
 
 			}
 
 			// check if source->target matchings are compatible with target->source matchings
 			for (int i = 0; i < k; i++)
 			{
-				if (std::get<3>(pairs_target_and_lag[i]))
+				if (std::get<4>(pairs_target_lag_and_corr[i]))
 				{
-					auto it = symmetric_matchings.find(std::make_pair(std::get<0>(pairs_target_and_lag[i]), it_s->first));
+					auto it = symmetric_matchings.find(std::make_pair(std::get<0>(pairs_target_lag_and_corr[i]), it_s->first));
 					if (it != symmetric_matchings.end())
 					{
 						// check if scales values are close
-						Scalar scale_s = std::get<2>(pairs_target_and_lag[i]);
+						Scalar scale_s = std::get<2>(pairs_target_lag_and_corr[i]);
 						Scalar scale_t = std::get<0>(it->second);
 						if (abs(scale_s + scale_t) <= shift_err)
-							(it->second) = std::make_pair((it->second).first, true);	 // indicate that a symmetric matching pair has been found
+							(it->second) = std::make_tuple(std::get<0>(it->second), std::get<1>(it->second), true);	 // indicate that a symmetric matching pair has been found
 					}
 
 				}
@@ -809,7 +809,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_symmetric_pairs(st
 		auto it = symmetric_matchings.begin();
 		while (it != symmetric_matchings.end())
 		{
-			if (!(it->second).second)
+			if (!std::get<2>(it->second))
 				symmetric_matchings.erase(it);
 			else
 				pos += 1;
@@ -819,14 +819,15 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_symmetric_pairs(st
 
 	}
 
-	std::vector<std::tuple<Point, Point, Scalar, Scalar>> target_source_matchings;
+	std::vector<std::tuple<Point, Point, Scalar, Scalar, Scalar>> target_source_matchings;
 	for (auto it = symmetric_matchings.begin(); it != symmetric_matchings.end(); it++)
 	{
 		Point & target_point = std::get<0>((map_index_target_profiles_cost.find(it->first.first))->second);
 		Point & source_point = std::get<0>((map_index_source_profiles_cost.find(it->first.second))->second);
-		Scalar lag = it->second.first;
+		Scalar lag = std::get<0>(it->second);
 		Scalar cost = std::get<2>((map_index_target_profiles_cost.find(it->first.first))->second)*std::get<2>((map_index_source_profiles_cost.find(it->first.second))->second);
-		target_source_matchings.push_back(std::make_tuple(target_point, source_point, lag, cost));
+		Scalar corr = std::get<1>(it->second);
+		target_source_matchings.push_back(std::make_tuple(target_point, source_point, lag, cost, corr));
 
 	}
 
