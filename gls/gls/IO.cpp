@@ -12,6 +12,8 @@
 #include "Patate/grenaille.h"
 #include "Eigen/Eigen"
 #include "IO.h"
+#include "ransac_scheme.h"
+#include "matching_prioritization.h"
 
 using namespace std;
 using namespace Grenaille;
@@ -422,7 +424,7 @@ void write_closest_matching_points(Point& target_point, std::vector<std::tuple<i
 }
 
 
-void write_closest_matching_points(pair_priority_queue& queue, std::string& output_filename, bool new_file)
+void write_closest_matching_points(pair_priority_queue& queue, PointMap* source_pointMap, PointMap* target_pointMap, std::string& output_filename, bool new_file)
 {
 	auto queue_copy = (*queue.get_queue_ptr());
 	std::ofstream output_file;
@@ -434,11 +436,43 @@ void write_closest_matching_points(pair_priority_queue& queue, std::string& outp
 
 	while (!queue_copy.empty())
 	{
-		std::tuple<Point, Point, Scalar, Scalar> tuple = queue_copy.top();
+		std::tuple<int, int, Scalar, Scalar> tuple = queue_copy.top();
 		queue_copy.pop();
 		//std::cout << " cost : " << std::get<3>(tuple) << std::endl;
-		output_file << std::get<0>(tuple).pos().transpose() << " " << std::get<1>(tuple).pos().transpose() << " " << std::get<2>(tuple) << " " << std::get<3>(tuple) << std::endl;
+		output_file << std::get<0>(target_pointMap->find_index(std::get<0>(tuple))->second).pos().transpose() << " " << std::get<0>(source_pointMap->find_index(std::get<1>(tuple))->second).pos().transpose() << " " << std::get<2>(tuple) << " " << std::get<3>(tuple) << std::endl;
 	}
 
 	output_file.close();
+}
+
+
+
+void write_tuples(std::string& filename, pair_priority_queue queue, PointMap* source_pointMap, PointMap* target_pointMap, Scalar max_err_scale)
+{
+	std::ofstream output_file;
+	output_file.open(filename, ios::out);
+	RansacScheme ransac(queue, source_pointMap, target_pointMap);
+	int nb_triplets = 0;
+	// write triplets
+	output_file << nb_triplets << std::endl;
+	while ((int)queue.get_queue_size() > 3)
+	{
+		RansacScheme::triplet triplet = ransac.pop_3_farthest_pairs();
+		Scalar err_scale = ransac.scaleDiff(triplet).first;
+		if (err_scale <= max_err_scale)
+		{
+			Scalar scale = 1.0/ransac.compute_scale(triplet);
+			output_file << std::get<0>(triplet.pair1) << " " << std::get<1>(triplet.pair1) << " " << scale << std::endl;
+			output_file << std::get<0>(triplet.pair2) << " " << std::get<1>(triplet.pair2) << " " << scale << std::endl;
+			output_file << std::get<0>(triplet.pair3) << " " << std::get<1>(triplet.pair3) << " " << scale << std::endl;
+			nb_triplets += 1;
+		}
+	}
+
+	// write nb triplets
+	output_file.seekp(0, ios::beg);
+	output_file << nb_triplets << std::endl;
+
+	output_file.close();
+	
 }

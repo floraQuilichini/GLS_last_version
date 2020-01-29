@@ -65,20 +65,20 @@ void RansacScheme::find_2_farthest_pairs(RansacScheme::triplet& triplet)
 
 
 
-std::tuple<Point, Point, Scalar, Scalar> RansacScheme::find_farthest_pair(std::tuple<Point, Point, Scalar, Scalar>& pair)
+std::tuple<int, int, Scalar, Scalar> RansacScheme::find_farthest_pair(std::tuple<int, int, Scalar, Scalar>& pair)
 {
 	Scalar dist_ref = 0.0;
-	std::tuple<Point, Point, Scalar, Scalar> farthest_pair;
-	Point p = std::get<0>(pair);
+	std::tuple<int, int, Scalar, Scalar> farthest_pair;
+	Point p = std::get<0>(target_pointMap_->find_index(std::get<0>(pair))->second);
 	queue_copy_ = *queue_ptr_;
 
 	while (!queue_copy_.empty())
 	{
-		std::tuple<Point, Point, Scalar, Scalar> query_pair = queue_copy_.top();
+		std::tuple<int, int, Scalar, Scalar> query_pair = queue_copy_.top();
 		queue_copy_.pop();
-		Point p_query = std::get<0>(query_pair);
+		Point p_query = std::get<0>(target_pointMap_->find_index(std::get<0>(query_pair))->second);
 		Scalar dist = compute_points_dist(p, p_query);
-		if (dist > dist_ref && !(std::get<1>(query_pair).pos() == std::get<1>(pair).pos()))
+		if (dist > dist_ref && !(std::get<0>(source_pointMap_->find_index(std::get<1>(query_pair))->second).pos() == std::get<0>(source_pointMap_->find_index(std::get<1>(pair))->second).pos()))
 		{
 			dist_ref = dist_ref;
 			farthest_pair = query_pair;
@@ -88,24 +88,24 @@ std::tuple<Point, Point, Scalar, Scalar> RansacScheme::find_farthest_pair(std::t
 	return farthest_pair;
 }
 
-std::tuple<Point, Point, Scalar, Scalar> RansacScheme::find_pair_to_maximize_triangle_surface(std::tuple<Point, Point, Scalar, Scalar>& pair1, std::tuple<Point, Point, Scalar, Scalar>& pair2)
+std::tuple<int, int, Scalar, Scalar> RansacScheme::find_pair_to_maximize_triangle_surface(std::tuple<int, int, Scalar, Scalar>& pair1, std::tuple<int, int, Scalar, Scalar>& pair2)
 {
-	Point p1 = std::get<0>(pair1);
-	Point p2 = std::get<0>(pair2);
-	std::tuple<Point, Point, Scalar, Scalar> pair3;
+	Point p1 = std::get<0>(target_pointMap_->find_index(std::get<0>(pair1))->second);
+	Point p2 = std::get<0>(target_pointMap_->find_index(std::get<0>(pair2))->second);
+	std::tuple<int, int, Scalar, Scalar> pair3;
 	Scalar max_area = 0.0;
 	Scalar a = compute_points_dist(p1, p2);
 	queue_copy_ = *queue_ptr_;
 
 	while (!queue_copy_.empty())
 	{
-		std::tuple<Point, Point, Scalar, Scalar> pair = queue_copy_.top();
+		std::tuple<int, int, Scalar, Scalar> pair = queue_copy_.top();
 		queue_copy_.pop();
-		if (!(std::get<1>(pair1).pos() == std::get<1>(pair).pos() || std::get<1>(pair2).pos() == std::get<1>(pair).pos()))
+		if (!(std::get<0>(source_pointMap_->find_index(std::get<1>(pair1))->second).pos() == std::get<0>(source_pointMap_->find_index(std::get<1>(pair))->second).pos() || std::get<0>(source_pointMap_->find_index(std::get<1>(pair2))->second).pos() == std::get<0>(source_pointMap_->find_index(std::get<1>(pair))->second).pos()))
 		{
 			// compute area of the triangle formed by the point std::get<1>(pair1), std::get<1>(pair2), std::get<1>(pair)
-			Scalar b = compute_points_dist(p1, std::get<0>(pair));
-			Scalar c = compute_points_dist(p2, std::get<0>(pair));
+			Scalar b = compute_points_dist(p1, std::get<0>(target_pointMap_->find_index(std::get<0>(pair))->second));
+			Scalar c = compute_points_dist(p2, std::get<0>(target_pointMap_->find_index(std::get<0>(pair))->second));
 			Scalar area = sqrt((a+b+c)*(b+c-a)*(a+c-b)*(a+b-c))/4.0;
 			if (area > max_area)
 			{
@@ -129,9 +129,9 @@ void RansacScheme::find_2_farthest_pairs_with_respect_to_geomVar(RansacScheme::t
 	// get second pair
 	while (!queue_copy_.empty())
 	{
-		std::tuple<Point, Point, Scalar, Scalar> pair = queue_copy_.top();
+		std::tuple<int, int, Scalar, Scalar> pair = queue_copy_.top();
 		queue_copy_.pop();
-		if (compute_points_dist(std::get<0>(triplet.pair1), std::get<0>(pair)) > bbox_diag_ratio && !(std::get<1>(triplet.pair1).pos() == std::get<1>(pair).pos()))
+		if (compute_points_dist(std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair1))->second), std::get<0>(target_pointMap_->find_index(std::get<0>(pair))->second)) > bbox_diag_ratio && !(std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair1))->second).pos() == std::get<0>(source_pointMap_->find_index(std::get<1>(pair))->second).pos()))
 		{
 			triplet.pair2 = pair;
 			break;
@@ -144,17 +144,17 @@ void RansacScheme::find_2_farthest_pairs_with_respect_to_geomVar(RansacScheme::t
 
 	// get third pair
 	queue_copy_ = *queue_ptr_;
-	Scalar a = compute_points_dist(std::get<0>(triplet.pair1), std::get<0>(triplet.pair2));
+	Scalar a = compute_points_dist(std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair1))->second), std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair2))->second));
 	Scalar max_area = sqrt(3.0) / 4.0* bbox_diag_ratio*bbox_diag_ratio;
 	while (!queue_copy_.empty())
 	{
-		std::tuple<Point, Point, Scalar, Scalar> pair = queue_copy_.top();
+		std::tuple<int, int, Scalar, Scalar> pair = queue_copy_.top();
 		queue_copy_.pop();
-		if (!(std::get<1>(triplet.pair1).pos() == std::get<1>(pair).pos() || std::get<1>(triplet.pair2).pos() == std::get<1>(pair).pos()))
+		if (!(std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair1))->second).pos() == std::get<0>(source_pointMap_->find_index(std::get<1>(pair))->second).pos() || std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair2))->second).pos() == std::get<0>(source_pointMap_->find_index(std::get<1>(pair))->second).pos()))
 		{
 			// compute area of the triangle formed by the point std::get<1>(pair1), std::get<1>(pair2), std::get<1>(pair)
-			Scalar b = compute_points_dist(std::get<0>(triplet.pair1), std::get<0>(pair));
-			Scalar c = compute_points_dist(std::get<0>(triplet.pair2), std::get<0>(pair));
+			Scalar b = compute_points_dist(std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair1))->second), std::get<0>(target_pointMap_->find_index(std::get<0>(pair))->second));
+			Scalar c = compute_points_dist(std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair2))->second), std::get<0>(target_pointMap_->find_index(std::get<0>(pair))->second));
 			Scalar area = sqrt((a + b + c)*(b + c - a)*(a + c - b)*(a + b - c)) / 4.0;
 			if (area > max_area)
 			{
@@ -172,6 +172,12 @@ void RansacScheme::find_2_farthest_pairs_with_respect_to_geomVar(RansacScheme::t
 
 
 RansacScheme::RansacScheme(pair_priority_queue& pair_prioritized) : queue_ptr_(pair_prioritized.get_queue_ptr()) {}
+RansacScheme::RansacScheme(pair_priority_queue& pair_prioritized, PointMap* source_pointMap, PointMap* target_pointMap)
+{
+	queue_ptr_ = pair_prioritized.get_queue_ptr();
+	source_pointMap_ = source_pointMap;
+	target_pointMap_ = target_pointMap;
+}
 
 RansacScheme::triplet RansacScheme::pop_triplet()
 {
@@ -189,9 +195,9 @@ RansacScheme::triplet RansacScheme::pop_triplet()
 		int counter = 1;
 		while (!queue_copy_.empty())
 		{
-			std::tuple<Point, Point, Scalar, Scalar> pair = queue_copy_.top();
+			std::tuple<int, int, Scalar, Scalar> pair = queue_copy_.top();
 			queue_copy_.pop();
-			if (!(std::get<0>(pair) == std::get<0>(triplet.pair1) || std::get<1>(pair) == std::get<1>(triplet.pair1)))
+			if (!(std::get<0>(target_pointMap_->find_index(std::get<0>(pair))->second) == std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair1))->second) || std::get<0>(source_pointMap_->find_index(std::get<1>(pair))->second) == std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair1))->second)))
 			{
 				if (counter == 1)
 				{
@@ -200,7 +206,7 @@ RansacScheme::triplet RansacScheme::pop_triplet()
 				}
 				if (counter == 2)
 				{
-					if (!(std::get<0>(pair) == std::get<0>(triplet.pair2) || std::get<1>(pair) == std::get<1>(triplet.pair2)))
+					if (!(std::get<0>(target_pointMap_->find_index(std::get<0>(pair))->second) == std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair2))->second) || std::get<0>(source_pointMap_->find_index(std::get<1>(pair))->second) == std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair2))->second)))
 					{
 						triplet.pair3 = pair;
 						is_triplet_complete = true;
@@ -301,12 +307,12 @@ Eigen::Matrix4d RansacScheme::compute_rigid_transform(RansacScheme::triplet t)
 	scaling_mat(2, 2) = 1.0 / scale;
 
 	// points 
-	VectorType target_pos1 = std::get<0>(t.pair1).pos();
-	VectorType source_pos1 = std::get<1>(t.pair1).pos();
-	VectorType target_pos2 = std::get<0>(t.pair2).pos();
-	VectorType source_pos2 = std::get<1>(t.pair2).pos();
-	VectorType target_pos3 = std::get<0>(t.pair3).pos();
-	VectorType source_pos3 = std::get<1>(t.pair3).pos();
+	VectorType target_pos1 = std::get<0>(target_pointMap_->find_index(std::get<0>(t.pair1))->second).pos();
+	VectorType source_pos1 = std::get<0>(source_pointMap_->find_index(std::get<1>(t.pair1))->second).pos();
+	VectorType target_pos2 = std::get<0>(target_pointMap_->find_index(std::get<0>(t.pair2))->second).pos();
+	VectorType source_pos2 = std::get<0>(source_pointMap_->find_index(std::get<1>(t.pair2))->second).pos();
+	VectorType target_pos3 = std::get<0>(target_pointMap_->find_index(std::get<0>(t.pair3))->second).pos();
+	VectorType source_pos3 = std::get<0>(source_pointMap_->find_index(std::get<1>(t.pair3))->second).pos();
 
 	// target and source data
 	Eigen::Matrix3d source_data, target_data;
@@ -358,17 +364,17 @@ Eigen::Matrix4d RansacScheme::compute_rigid_transform(RansacScheme::triplet t)
 /* not sure this is the proper way to solve registration problem for affine transformation with 4 matching points. 
 The method used (by solving a linear system) returns a 4-by-4 matrix (with coefficients for rotation, translation and scaling) but solves the 12 unknown as if they were decorrelated 
 In fact, it is not quite the case. Some of the terms of the matrix are related to each other and we have only 10 unknowns [1 theta, 3 rot axis, 3 translation, 3 scaling ](and not 12)*/
-Eigen::Matrix4d RansacScheme::compute_rigid_transform(RansacScheme::triplet t, std::tuple<Point, Point, Scalar, Scalar> q)
+Eigen::Matrix4d RansacScheme::compute_rigid_transform(RansacScheme::triplet t, std::tuple<int, int, Scalar, Scalar> q)
 {
 	// 4 pairs of points 
-	VectorType target_pos1 = std::get<0>(t.pair1).pos();
-	VectorType source_pos1 = std::get<1>(t.pair1).pos();
-	VectorType target_pos2 = std::get<0>(t.pair2).pos();
-	VectorType source_pos2 = std::get<1>(t.pair2).pos();
-	VectorType target_pos3 = std::get<0>(t.pair3).pos();
-	VectorType source_pos3 = std::get<1>(t.pair3).pos();
-	VectorType target_q_pos = std::get<0>(q).pos();
-	VectorType source_q_pos = std::get<1>(q).pos();
+	VectorType target_pos1 = std::get<0>(target_pointMap_->find_index(std::get<0>(t.pair1))->second).pos();
+	VectorType source_pos1 = std::get<0>(source_pointMap_->find_index(std::get<1>(t.pair1))->second).pos();
+	VectorType target_pos2 = std::get<0>(target_pointMap_->find_index(std::get<0>(t.pair2))->second).pos();
+	VectorType source_pos2 = std::get<0>(source_pointMap_->find_index(std::get<1>(t.pair2))->second).pos();
+	VectorType target_pos3 = std::get<0>(target_pointMap_->find_index(std::get<0>(t.pair3))->second).pos();
+	VectorType source_pos3 = std::get<0>(source_pointMap_->find_index(std::get<1>(t.pair3))->second).pos();
+	VectorType target_q_pos = std::get<0>(target_pointMap_->find_index(std::get<0>(q))->second).pos();
+	VectorType source_q_pos = std::get<0>(source_pointMap_->find_index(std::get<1>(q))->second).pos();
 
 	// target and source data
 	Eigen::Matrix4d source_data = Eigen::Matrix4d::Ones(4, 4);
@@ -397,22 +403,22 @@ Scalar RansacScheme::registrationErr(Eigen::Matrix4d transform, RansacScheme::tr
 {
 	Eigen::Matrix3d R = transform.block(0, 0, 3, 3);
 	Eigen::Vector3d T = transform.block(0, 3, 3, 1);
-	Scalar err1 = ((Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair1).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair1).pos().data(), 3, 1) - T).cwiseAbs()).sum();
-	Scalar err2 = ((Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair2).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair2).pos().data(), 3, 1) - T).cwiseAbs()).sum();
-	Scalar err3 = ((Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair3).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair3).pos().data(), 3, 1) - T).cwiseAbs()).sum();
+	Scalar err1 = ((Eigen::Map<Eigen::MatrixXd>(std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair1))->second).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair1))->second).pos().data(), 3, 1) - T).cwiseAbs()).sum();
+	Scalar err2 = ((Eigen::Map<Eigen::MatrixXd>(std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair2))->second).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair2))->second).pos().data(), 3, 1) - T).cwiseAbs()).sum();
+	Scalar err3 = ((Eigen::Map<Eigen::MatrixXd>(std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair3))->second).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair3))->second).pos().data(), 3, 1) - T).cwiseAbs()).sum();
 
 	//std::cout << "reg err : " << (err1 + err2 + err3) / 3.0;
 	return (err1 + err2 + err3) / 3.0;
 }
 
-Scalar RansacScheme::registrationErr(Eigen::Matrix4d transform, RansacScheme::triplet& triplet, std::tuple<Point, Point, Scalar, Scalar>& q)
+Scalar RansacScheme::registrationErr(Eigen::Matrix4d transform, RansacScheme::triplet& triplet, std::tuple<int, int, Scalar, Scalar>& q)
 {
 	Eigen::Matrix3d R = transform.block(0, 0, 3, 3);
 	Eigen::Vector3d T = transform.block(0, 3, 3, 1);
-	Scalar err1 = ((Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair1).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair1).pos().data(), 3, 1) - T).cwiseAbs()).sum();
-	Scalar err2 = ((Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair2).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair2).pos().data(), 3, 1) - T).cwiseAbs()).sum();
-	Scalar err3 = ((Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair3).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair3).pos().data(), 3, 1) - T).cwiseAbs()).sum();
-	Scalar errq = ((Eigen::Map<Eigen::MatrixXd>(std::get<1>(q).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(q).pos().data(), 3, 1) - T).cwiseAbs()).sum();
+	Scalar err1 = ((Eigen::Map<Eigen::MatrixXd>(std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair1))->second).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair1))->second).pos().data(), 3, 1) - T).cwiseAbs()).sum();
+	Scalar err2 = ((Eigen::Map<Eigen::MatrixXd>(std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair2))->second).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair2))->second).pos().data(), 3, 1) - T).cwiseAbs()).sum();
+	Scalar err3 = ((Eigen::Map<Eigen::MatrixXd>(std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair3))->second).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair3))->second).pos().data(), 3, 1) - T).cwiseAbs()).sum();
+	Scalar errq = ((Eigen::Map<Eigen::MatrixXd>(std::get<0>(source_pointMap_->find_index(std::get<1>(q))->second).pos().data(), 3, 1) - R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(target_pointMap_->find_index(std::get<0>(q))->second).pos().data(), 3, 1) - T).cwiseAbs()).sum();
 	
 	//std::cout << "reg err : " << (err1 + err2 + err3 + errq) / 4.0;
 	return (err1 + err2 + err3 + errq) / 4.0;
@@ -430,43 +436,43 @@ Scalar RansacScheme::normalErr(Eigen::Matrix4d transform, RansacScheme::triplet&
 {
 
 	Eigen::Matrix3d R = transform.block(0, 0, 3, 3);
-	Scalar err1 = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair1).normal().data(), 3, 1) ,  R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair1).normal().data(), 3, 1));
-	Scalar err2 = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair2).normal().data(), 3, 1), R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair2).normal().data(), 3, 1));
-	Scalar err3 = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair3).normal().data(), 3, 1), R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair3).normal().data(), 3, 1));
+	Scalar err1 = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair1))->second).normal().data(), 3, 1) ,  R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair1))->second).normal().data(), 3, 1));
+	Scalar err2 = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair2))->second).normal().data(), 3, 1), R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair2))->second).normal().data(), 3, 1));
+	Scalar err3 = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair3))->second).normal().data(), 3, 1), R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair3))->second).normal().data(), 3, 1));
 
 	//std::cout << "  normal err : " << (err1 + err2 + err3) / 3.0 << std::endl;
 	return (err1 + err2 + err3) / 3.0;
 }
 
-Scalar RansacScheme::normalErr(Eigen::Matrix4d transform, RansacScheme::triplet& triplet, std::tuple<Point, Point, Scalar, Scalar>& q)
+Scalar RansacScheme::normalErr(Eigen::Matrix4d transform, RansacScheme::triplet& triplet, std::tuple<int, int, Scalar, Scalar>& q)
 {
 
 	Eigen::Matrix3d R = transform.block(0, 0, 3, 3);
-	Scalar err1 = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair1).normal().data(), 3, 1), R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair1).normal().data(), 3, 1));
-	Scalar err2 = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair2).normal().data(), 3, 1), R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair2).normal().data(), 3, 1));
-	Scalar err3 = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<1>(triplet.pair3).normal().data(), 3, 1), R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(triplet.pair3).normal().data(), 3, 1));
-	Scalar errq = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<1>(q).normal().data(), 3, 1), R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(q).normal().data(), 3, 1));
+	Scalar err1 = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair1))->second).normal().data(), 3, 1), R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair1))->second).normal().data(), 3, 1));
+	Scalar err2 = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair2))->second).normal().data(), 3, 1), R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair2))->second).normal().data(), 3, 1));
+	Scalar err3 = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair3))->second).normal().data(), 3, 1), R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair3))->second).normal().data(), 3, 1));
+	Scalar errq = compute_angle(Eigen::Map<Eigen::MatrixXd>(std::get<0>(source_pointMap_->find_index(std::get<1>(q))->second).normal().data(), 3, 1), R*Eigen::Map<Eigen::MatrixXd>(std::get<0>(target_pointMap_->find_index(std::get<0>(q))->second).normal().data(), 3, 1));
 
 	//std::cout << "  normal err : " << (err1 + err2 + err3 + errq) / 4.0 << std::endl;
 	return (err1 + err2 + err3 + errq) / 4.0;
 }
 
 
-bool RansacScheme::is_q_unique(RansacScheme::triplet t, std::tuple<Point, Point, Scalar, Scalar> q)
+bool RansacScheme::is_q_unique(RansacScheme::triplet t, std::tuple<int, int, Scalar, Scalar> q)
 {
 	/*std::cout << "target point 1 : " << std::get<0>(t.pair1).pos().transpose() << " , target point 2 : " << std::get<0>(t.pair2).pos().transpose() << " , target point 3 : " << std::get<0>(t.pair3).pos().transpose() << std::endl;
 	std::cout << "source point 1 : " << std::get<1>(t.pair1).pos().transpose() << " , source point 2 : " << std::get<1>(t.pair2).pos().transpose() << " , source point 3 : " << std::get<1>(t.pair3).pos().transpose() << std::endl;
 	std::cout << "target q : " << std::get<0>(q).pos().transpose() << " , source q : " << std::get<1>(q).pos().transpose() << std::endl;*/
 
-	if (std::get<0>(t.pair1).pos() == std::get<0>(q).pos() || std::get<0>(t.pair2).pos() == std::get<0>(q).pos() || std::get<0>(t.pair3).pos() == std::get<0>(q).pos())
+	if (std::get<0>(target_pointMap_->find_index(std::get<0>(t.pair1))->second).pos() == std::get<0>(target_pointMap_->find_index(std::get<0>(q))->second).pos() || std::get<0>(target_pointMap_->find_index(std::get<0>(t.pair2))->second).pos() == std::get<0>(target_pointMap_->find_index(std::get<0>(q))->second).pos() || std::get<0>(target_pointMap_->find_index(std::get<0>(t.pair3))->second).pos() == std::get<0>(target_pointMap_->find_index(std::get<0>(q))->second).pos())
 		return false;
-	if (std::get<1>(t.pair1).pos() == std::get<1>(q).pos() || std::get<1>(t.pair2).pos() == std::get<1>(q).pos() || std::get<1>(t.pair3).pos() == std::get<1>(q).pos())
+	if (std::get<0>(source_pointMap_->find_index(std::get<1>(t.pair1))->second).pos() == std::get<0>(source_pointMap_->find_index(std::get<1>(q))->second).pos() || std::get<0>(source_pointMap_->find_index(std::get<1>(t.pair2))->second).pos() == std::get<0>(source_pointMap_->find_index(std::get<1>(q))->second).pos() || std::get<0>(source_pointMap_->find_index(std::get<1>(t.pair3))->second).pos() == std::get<0>(source_pointMap_->find_index(std::get<1>(q))->second).pos())
 		return false;
 	return true;
 }
 
 
-bool RansacScheme::is_valid(std::tuple<Point, Point, Scalar, Scalar> q, RansacScheme::triplet t, Scalar max_err_reg, Scalar max_err_norm)
+bool RansacScheme::is_valid(std::tuple<int, int, Scalar, Scalar> q, RansacScheme::triplet t, Scalar max_err_reg, Scalar max_err_norm)
 {
 	if (!is_q_unique(t, q))
 		return false;
@@ -485,12 +491,12 @@ Scalar RansacScheme::compute_scale(RansacScheme::triplet& triplet)
 {
 	Point ps1, ps2, ps3, pt1, pt2, pt3;
 	Scalar a, b, c, A, B, C;
-	pt1 = std::get<0>(triplet.pair1);
-	ps1 = std::get<1>(triplet.pair1);
-	pt2 = std::get<0>(triplet.pair2);
-	ps2 = std::get<1>(triplet.pair2);
-	pt3 = std::get<0>(triplet.pair3);
-	ps3 = std::get<1>(triplet.pair3);
+	pt1 = std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair1))->second);
+	ps1 = std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair1))->second);
+	pt2 = std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair2))->second);
+	ps2 = std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair2))->second);
+	pt3 = std::get<0>(target_pointMap_->find_index(std::get<0>(triplet.pair3))->second);
+	ps3 = std::get<0>(source_pointMap_->find_index(std::get<1>(triplet.pair3))->second);
 
 	a = compute_points_dist(pt1, pt2);
 	b = compute_points_dist(pt2, pt3);
@@ -514,9 +520,9 @@ Eigen::Matrix4d RansacScheme::ransac_algorithm(int nb_iterations, Scalar max_err
 		triplet t = pop_3_farthest_pairs(bbox_diag_ratio);
 		//triplet t = pick_triplet(8, 9, 23);
 		/*std::cout << "triplet : " << std::endl;
-		std::cout << std::get<0>(t.pair1).pos().transpose() << " , " << std::get<1>(t.pair1).pos().transpose() << " , " << std::get<2>(t.pair1) << std::endl;
-		std::cout << std::get<0>(t.pair2).pos().transpose() << " , " << std::get<1>(t.pair2).pos().transpose() << " , " << std::get<2>(t.pair2) << std::endl;
-		std::cout << std::get<0>(t.pair3).pos().transpose() << " , " << std::get<1>(t.pair3).pos().transpose() << " , " << std::get<2>(t.pair3) << std::endl;*/
+		std::cout << std::get<0>(target_pointMap_->find_index(std::get<0>(t.pair1))->second).pos().transpose() << " , " << std::get<0>(source_pointMap_->find_index(std::get<1>(t.pair1))->second).pos().transpose() << " , " << std::get<2>(t.pair1) << std::endl;
+		std::cout << std::get<0>(target_pointMap_->find_index(std::get<0>(t.pair2))->second).pos().transpose() << " , " << std::get<0>(source_pointMap_->find_index(std::get<1>(t.pair2))->second).pos().transpose() << " , " << std::get<2>(t.pair2) << std::endl;
+		std::cout << std::get<0>(target_pointMap_->find_index(std::get<0>(t.pair3))->second).pos().transpose() << " , " << std::get<0>(source_pointMap_->find_index(std::get<1>(t.pair3))->second).pos().transpose() << " , " << std::get<2>(t.pair3) << std::endl;*/
 		Scalar err_scale = scaleDiff(t).first;
 		//std::cout << "err scale : " << err_scale << std::endl;
 		if (err_scale < max_err_scale)
@@ -529,7 +535,7 @@ Eigen::Matrix4d RansacScheme::ransac_algorithm(int nb_iterations, Scalar max_err
 				queue_copy_ = *queue_ptr_;
 				while (!queue_copy_.empty())
 				{
-					std::tuple<Point, Point, Scalar, Scalar> q = queue_copy_.top();
+					std::tuple<int, int, Scalar, Scalar> q = queue_copy_.top();
 					queue_copy_.pop();
 					if (is_valid(q, t, max_err_reg, max_err_norm))
 						return compute_rigid_transform(t, q);

@@ -23,6 +23,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #include <tuple>
 #include <fstream>
 #include <string>
+#include <chrono>
 
 using namespace std;
 using namespace Grenaille;
@@ -390,12 +391,16 @@ int main(int argc, char** argv)
 	read_descriptors_text_file(descriptors_source_filename, source_descriptors_geom_var, nb_source_points, nb_source_samples, min_source_scale, max_source_scale, base);
 	read_descriptors_text_file(descriptors_target_filename, target_descriptors_geom_var, nb_target_points, nb_target_samples, min_target_scale, max_target_scale, base);
 	
+	// fill point maps
+	PointMap map_index_profiles_cost_source, map_index_profiles_cost_target;
+	map_index_profiles_cost_source.set_point_profiles_cost(source_descriptors_geom_var, nb_source_samples, alpha);
+	map_index_profiles_cost_target.set_point_profiles_cost(target_descriptors_geom_var, nb_target_samples, alpha);
 
 	// compute matching pairs with priority
 	VectorType w = Eigen::Vector3d::Ones();
 	Scalar ratio = 0.2;
 	//std::vector<std::tuple<Point, Point, Scalar, Scalar>> three_closest_pairs = compute_3_closest_pairs(source_descriptors_geom_var, target_descriptors_geom_var, ratio, nb_source_samples, nb_target_samples, w, 4.0);
-	std::vector<std::tuple<Point, Point, Scalar, Scalar, Scalar>> symmetric_pairs = compute_symmetric_pairs(source_descriptors_geom_var, target_descriptors_geom_var, ratio, nb_source_samples, nb_target_samples, 3, w, 4.0, false);
+	std::vector<std::tuple<std::pair<int, int>, Scalar, Scalar, Scalar>> symmetric_pairs = compute_symmetric_pairs(map_index_profiles_cost_source, map_index_profiles_cost_target, ratio, 3, w, 4.0, false);
 	
 	// apply Ransac scheme
 	int nb_iterations = 1000;
@@ -403,12 +408,18 @@ int main(int argc, char** argv)
 	Scalar max_err_reg = 0.8; 
 	Scalar max_err_norm = 0.35;
 	//pair_priority_queue queue(three_closest_pairs, min_source_scale, min_target_scale, base);
-	pair_priority_queue queue(symmetric_pairs, min_source_scale, min_target_scale, base);
+	pair_priority_queue queue(symmetric_pairs, &map_index_profiles_cost_source, &map_index_profiles_cost_target, min_source_scale, min_target_scale, base);
 	//queue.display_queue();
 	std::string output_filename = "C:\\Registration\\test_gls_algo\\matching_pairs\\source_matching_pairs.txt";
-	write_closest_matching_points(queue, output_filename, false);
-	RansacScheme ransac(queue);
+	std::string tuple_filename = "C:\\Registration\\test_gls_algo\\matching_pairs\\tuple_file.txt";
+	write_closest_matching_points(queue, &map_index_profiles_cost_source, &map_index_profiles_cost_target, output_filename, false);
+	write_tuples(tuple_filename, queue, &map_index_profiles_cost_source, &map_index_profiles_cost_target, max_err_scale);
+	std::chrono::high_resolution_clock::time_point t0 = std::chrono::high_resolution_clock::now();
+	RansacScheme ransac(queue, &map_index_profiles_cost_source, &map_index_profiles_cost_target);
 	Eigen::Matrix4d transform = ransac.ransac_algorithm(nb_iterations, max_err_scale, max_err_reg, max_err_norm);
+	std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+	std::chrono::nanoseconds ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0);
+	std::cout << "It took " << ns.count() << " nanosecond(s) to run RANSAC" << std::endl;
 
 	//std::cout << "transform : " << transform << std::endl;
 

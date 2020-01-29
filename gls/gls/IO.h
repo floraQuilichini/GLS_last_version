@@ -4,6 +4,7 @@
 #include <tuple>
 #include "base.h"
 #include "matching_prioritization.h"
+#include "relative_scale.h"
 
 
 std::string extract_ext(std::string filename);
@@ -39,4 +40,6 @@ void write_closest_matching_points(const Point& target_point, std::vector<std::t
 
 void write_closest_matching_points(Point& target_point, std::vector<std::tuple<int, Point, Scalar, Scalar, bool>>& pairs_source_lag_and_corr, std::string& output_filename, bool new_file = false);
 
-void write_closest_matching_points(pair_priority_queue& queue, std::string& output_filename, bool new_file = false);
+void write_closest_matching_points(pair_priority_queue& queue, PointMap* source_pointMap, PointMap* target_pointMap, std::string& output_filename, bool new_file = false);
+
+void write_tuples(std::string& filename, pair_priority_queue queue, PointMap* source_pointMap, PointMap* target_pointMap, Scalar max_err_scale);

@@ -16,25 +16,25 @@ mycomparison::mycomparison(const bool& revparam)
 	reverse = revparam;
 }
 
-bool mycomparison::operator()(const std::tuple<Point, Point, Scalar, Scalar>& t1, const std::tuple<Point, Point, Scalar, Scalar>& t2) const
+bool mycomparison::operator()(const std::tuple<int, int, Scalar, Scalar>& t1, const std::tuple<int, int, Scalar, Scalar>& t2) const
 {
 	if (reverse) return (std::get<3>(t1)<std::get<3>(t2));
 	else return (std::get<3>(t1)>std::get<3>(t2));
 }
 
 
-pair_priority_queue::pair_priority_queue(const std::tuple<Point, Point, Scalar, Scalar>& pair)
+pair_priority_queue::pair_priority_queue(const std::tuple<int, int, Scalar, Scalar>& pair)
 {
 	queue_.push(pair);
 }
 
-pair_priority_queue::pair_priority_queue(const std::vector<std::tuple<Point, Point, Scalar, Scalar>>& vec_pair)
+pair_priority_queue::pair_priority_queue(const std::vector<std::tuple<int, int, Scalar, Scalar>>& vec_pair)
 {
 	for (int i=0; i<vec_pair.size(); i++)
 		queue_.push(vec_pair[i]);
 }
 
-pair_priority_queue::pair_priority_queue(const std::vector<std::tuple<Point, Point, Scalar, Scalar>>& vec_pair, Scalar min_source_scale, Scalar min_target_scale, Scalar base)
+pair_priority_queue::pair_priority_queue(const std::vector<std::tuple<int, int, Scalar, Scalar>>& vec_pair, Scalar min_source_scale, Scalar min_target_scale, Scalar base)
 {
 	
 	for (int i = 0; i < vec_pair.size(); i++)
@@ -48,7 +48,7 @@ pair_priority_queue::pair_priority_queue(const std::vector<std::tuple<Point, Poi
 
 }
 
-pair_priority_queue::pair_priority_queue(const std::vector<std::tuple<Point, Point, Scalar, Scalar, Scalar>>& vec_pair, Scalar min_source_scale, Scalar min_target_scale, Scalar base)
+pair_priority_queue::pair_priority_queue(const std::vector<std::tuple<int, int, Scalar, Scalar, Scalar>>& vec_pair, Scalar min_source_scale, Scalar min_target_scale, Scalar base)
 {
 
 	for (int i = 0; i < vec_pair.size(); i++)
@@ -63,8 +63,24 @@ pair_priority_queue::pair_priority_queue(const std::vector<std::tuple<Point, Poi
 
 }
 
+pair_priority_queue::pair_priority_queue(const std::vector<std::tuple<std::pair<int, int>, Scalar, Scalar, Scalar>>& vec_pair, PointMap* source_pointMap, PointMap* target_pointMap, Scalar min_source_scale, Scalar min_target_scale, Scalar base)
+{
+	source_pointMap_ = source_pointMap;
+	target_pointMap_ = target_pointMap;
+	for (int i = 0; i < vec_pair.size(); i++)
+	{
+		// compute scale 
+		Scalar lag = std::get<1>(vec_pair[i]);
+		Scalar scale = (min_target_scale / min_source_scale)*pow(base, -lag);
 
-void pair_priority_queue::add_pair(const std::tuple<Point, Point, Scalar, Scalar>& pair)
+		// fill queue
+		queue_.push(std::make_tuple(std::get<0>(vec_pair[i]).first, std::get<0>(vec_pair[i]).second, scale, std::get<2>(vec_pair[i])));
+	}
+
+}
+
+
+void pair_priority_queue::add_pair(const std::tuple<int, int, Scalar, Scalar>& pair)
 {
 	queue_.push(pair);
 }
@@ -79,16 +95,18 @@ void pair_priority_queue::empty_queue()
 
 void pair_priority_queue::display_queue()
 {
-	std::priority_queue<std::tuple<Point, Point, Scalar, Scalar>, std::vector<std::tuple<Point, Point, Scalar, Scalar>>, mycomparison> queue_copie = queue_;
+	std::priority_queue<std::tuple<int, int, Scalar, Scalar>, std::vector<std::tuple<int, int, Scalar, Scalar>>, mycomparison> queue_copie = queue_;
 	while (!queue_copie.empty())
 	{
-		std::tuple<Point, Point, Scalar, Scalar> tuple = queue_copie.top();
+		std::tuple<int, int, Scalar, Scalar> tuple = queue_copie.top();
 		queue_copie.pop();
-		std::cout << "p_target : " << std::get<0>(tuple).pos() <<", p_source : " << std::get<1>(tuple).pos() << ", relative scale : " << std::get<2>(tuple) << ", cost : " << std::get<3>(tuple) << std::endl;
+		std::cout << "p_target : " << std::get<0>(target_pointMap_->find_index(std::get<0>(tuple))->second).pos() <<", p_source : " << std::get<0>(source_pointMap_->find_index(std::get<1>(tuple))->second).pos() << ", relative scale : " << std::get<2>(tuple) << ", cost : " << std::get<3>(tuple) << std::endl;
 	}
 }
 
-std::priority_queue<std::tuple<Point, Point, Scalar, Scalar>, std::vector<std::tuple<Point, Point, Scalar, Scalar>>, mycomparison>* pair_priority_queue::get_queue_ptr()
+size_t pair_priority_queue::get_queue_size() { return queue_.size(); }
+
+std::priority_queue<std::tuple<int, int, Scalar, Scalar>, std::vector<std::tuple<int, int, Scalar, Scalar>>, mycomparison>* pair_priority_queue::get_queue_ptr()
 {
 	return (&queue_);
 }

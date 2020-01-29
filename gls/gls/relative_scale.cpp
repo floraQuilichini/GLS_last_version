@@ -665,7 +665,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 }
 
 
-void set_point_profiles_cost(std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>& point_gls_profiles, std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>>& map_index_point_profiles_cost, int nb_samples, int alpha)
+void PointMap::set_point_profiles_cost(std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>& point_gls_profiles, int nb_samples, int alpha)
 {
 	size_t nb_points = point_gls_profiles.size();
 
@@ -691,23 +691,24 @@ void set_point_profiles_cost(std::vector<std::tuple<Point, std::vector<std::tupl
 		pt_profiles.col(2) = Eigen::Map<Eigen::ArrayXd>(pt_phi_profile.data(), nb_samples);
 
 		//store values in map
-		map_index_point_profiles_cost.insert(std::make_pair(k, std::make_tuple(std::get<0>(point_gls_profiles[k]), pt_profiles, priority)));
+		map_index_point_profiles_cost_.insert(std::make_pair(k, std::make_tuple(std::get<0>(point_gls_profiles[k]), pt_profiles, priority)));
 	}
 }
 
-
-std::vector<std::tuple<Point, Point, Scalar, Scalar, Scalar>> compute_symmetric_pairs(std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>& source_gls_profiles, std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>& target_gls_profiles, Scalar ratio, int nb_source_samples, int nb_target_samples, int k, VectorType w, Scalar alpha, bool cross_check)
+std::pair<std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>>::iterator, std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>>::iterator> PointMap::get_iterator_range()
 {
-	std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>> map_index_source_profiles_cost;
-	std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>> map_index_target_profiles_cost;
-	size_t nb_source_points = source_gls_profiles.size();
-	size_t nb_target_points = target_gls_profiles.size();
+	return std::make_pair(map_index_point_profiles_cost_.begin(), map_index_point_profiles_cost_.end());
+}
+
+std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>>::iterator PointMap::find_index(int index)
+{
+	return map_index_point_profiles_cost_.find(index);
+}
+
+std::vector<std::tuple<std::pair<int, int>, Scalar, Scalar, Scalar>> compute_symmetric_pairs(PointMap& map_index_profiles_cost_source, PointMap& map_index_profiles_cost_target, Scalar ratio, int k, VectorType w, Scalar alpha, bool cross_check)
+{
 	Scalar ratio_corr = 0.9;
 	Scalar shift_err = 5.0;
-
-	// set points map
-	set_point_profiles_cost(source_gls_profiles, map_index_source_profiles_cost, nb_source_samples, alpha);
-	set_point_profiles_cost(target_gls_profiles, map_index_target_profiles_cost, nb_target_samples, alpha);
 
 	// get W vector   -- slower than [w(0), w(1), w(2)].transpose() ?
 	Eigen::Array<Scalar, 1, 3> W;
@@ -716,7 +717,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar, Scalar>> compute_symmetric_
 	std::map<std::pair<int, int>, std::tuple<Scalar, Scalar, bool>> symmetric_matchings;
 
 	// search for target->source matching
-	for (auto it_t  = map_index_target_profiles_cost.begin(); it_t != map_index_target_profiles_cost.end(); it_t++)
+	for (auto it_t  = map_index_profiles_cost_target.get_iterator_range().first; it_t != map_index_profiles_cost_target.get_iterator_range().second; it_t++)
 	{
 		// intialize max_corr and  pairs_source_and_lag (for k nearest source points)
 		std::multiset<Scalar> max_corr;
@@ -728,7 +729,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar, Scalar>> compute_symmetric_
 		}
 
 		// find, for each target point its closest point in source points and its related estimated shift
-		for (auto it_s = map_index_source_profiles_cost.begin(); it_s != map_index_source_profiles_cost.end(); it_s++)
+		for (auto it_s = map_index_profiles_cost_source.get_iterator_range().first; it_s != map_index_profiles_cost_source.get_iterator_range().second; it_s++)
 		{
 			// compute shifts
 			std::pair<Scalar, Scalar> pair_shift_Dsigma = compute_optimal_shift(std::get<1>(it_s->second), std::get<1>(it_t->second), W, alpha, ratio);
@@ -756,7 +757,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar, Scalar>> compute_symmetric_
 		std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>> symmetric_source_pairs;
 		// get source points needed for cross_check
 		for (auto it = symmetric_matchings.begin(); it!= symmetric_matchings.end(); it++)
-				symmetric_source_pairs.insert(*(map_index_source_profiles_cost.find(it->first.second)));
+				symmetric_source_pairs.insert(*(map_index_profiles_cost_source.find_index(it->first.second)));
 			
 
 		// search for symmetric source->target matching
@@ -772,7 +773,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar, Scalar>> compute_symmetric_
 			}
 
 			// find, for each symmetric source point its closest point in target and its related estimated shift
-			for (auto it_t = map_index_target_profiles_cost.begin(); it_t != map_index_target_profiles_cost.end(); it_t++)
+			for (auto it_t = map_index_profiles_cost_target.get_iterator_range().first; it_t != map_index_profiles_cost_target.get_iterator_range().second; it_t++)
 			{
 				// compute shifts
 				std::pair<Scalar, Scalar> pair_shift_Dsigma = compute_optimal_shift(std::get<1>(it_t->second), std::get<1>(it_s->second), W, alpha, ratio);
@@ -819,15 +820,13 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar, Scalar>> compute_symmetric_
 
 	}
 
-	std::vector<std::tuple<Point, Point, Scalar, Scalar, Scalar>> target_source_matchings;
+	std::vector<std::tuple<std::pair<int, int>, Scalar, Scalar, Scalar>> target_source_matchings;
 	for (auto it = symmetric_matchings.begin(); it != symmetric_matchings.end(); it++)
 	{
-		Point & target_point = std::get<0>((map_index_target_profiles_cost.find(it->first.first))->second);
-		Point & source_point = std::get<0>((map_index_source_profiles_cost.find(it->first.second))->second);
 		Scalar lag = std::get<0>(it->second);
-		Scalar cost = std::get<2>((map_index_target_profiles_cost.find(it->first.first))->second)*std::get<2>((map_index_source_profiles_cost.find(it->first.second))->second);
+		Scalar cost = std::get<2>((map_index_profiles_cost_target.find_index(it->first.first))->second)*std::get<2>((map_index_profiles_cost_source.find_index(it->first.second))->second);
 		Scalar corr = std::get<1>(it->second);
-		target_source_matchings.push_back(std::make_tuple(target_point, source_point, lag, cost, corr));
+		target_source_matchings.push_back(std::make_tuple(it->first, lag, cost, corr));
 
 	}
 
