@@ -17,6 +17,36 @@ Scalar RansacScheme::compute_points_dist(Point& p1, Point& p2)
 }
 
 
+std::pair<double, int> RansacScheme::compute_min(std::vector<std::pair<double, int>>& vec, int index_to_remove)
+{
+	std::pair<double, int> min_index;
+	if (index_to_remove > -1)
+	{
+
+		if (vec[0].second == index_to_remove)
+			min_index = std::make_pair(vec[1].first, 0);
+		else
+			min_index = std::make_pair(vec[0].first, 0);
+		for (int i = 0; i < (int)vec.size(); i++)
+		{
+			if (vec[i].first < min_index.first && vec[i].second != index_to_remove)
+				min_index = std::make_pair(vec[i].first, i);
+		}
+	}
+
+	else
+	{
+		min_index = std::make_pair(vec[0].first, 0);
+		for (int i = 0; i < (int)vec.size(); i++)
+		{
+			if (vec[i].first < min_index.first)
+				min_index = std::make_pair(vec[i].first, i);
+		}
+	}
+
+	return min_index;
+}
+
 /*void RansacScheme::find_2_farthest_pairs(RansacScheme::triplet& triplet)
 {
 	Scalar dist2 = 0.0;
@@ -170,7 +200,6 @@ void RansacScheme::find_2_farthest_pairs_with_respect_to_geomVar(RansacScheme::t
 
 }
 
-
 RansacScheme::RansacScheme(pair_priority_queue& pair_prioritized) : queue_ptr_(pair_prioritized.get_queue_ptr()) {}
 RansacScheme::RansacScheme(pair_priority_queue& pair_prioritized, PointMap* source_pointMap, PointMap* target_pointMap)
 {
@@ -282,6 +311,108 @@ RansacScheme::triplet RansacScheme::pop_3_farthest_pairs(Scalar bbox_diag_ratio)
 	}
 
 	return triplet;
+}
+
+
+RansacScheme::pqueue RansacScheme::pop_k_farthest_pairs(RansacScheme::pqueue& queue, Scalar bbox_diag, int k, Scalar lambda)
+{
+	RansacScheme::pqueue queue_k_pairs;
+
+	if ((int)queue.size() > k)
+	{
+		auto queue_copy = queue;
+		std::tuple<int, int, Scalar, Scalar> pair1 = queue.top();
+		queue.pop();
+		
+		// get k initial indices
+		std::multimap<int, std::pair<double, std::tuple<int, Scalar, Scalar>>> k_indices_and_sumdist;
+		k_indices_and_sumdist.insert(std::make_pair(std::get<0>(pair1), std::make_pair(0.0, std::make_tuple(std::get<1>(pair1), std::get<2>(pair1), std::get<3>(pair1)))));
+		while((int) k_indices_and_sumdist.size() < k)
+		{
+			auto pair = queue.top();
+			queue.pop();
+			k_indices_and_sumdist.insert(std::make_pair(std::get<0>(pair), std::make_pair(0.0, std::make_tuple(std::get<1>(pair), std::get<2>(pair), std::get<3>(pair)))));
+		}
+
+		// compute k-points metric (linear combination of cost and L2 distance)
+		for (auto it_i = k_indices_and_sumdist.begin(); it_i != k_indices_and_sumdist.end(); it_i++)
+		{
+			double sum = 0.0;
+			for (auto it_j = k_indices_and_sumdist.begin(); it_j != k_indices_and_sumdist.end(); it_j++)
+				 sum += compute_points_dist(std::get<0>(target_pointMap_->find_index(it_i->first)->second), std::get<0>(target_pointMap_->find_index(it_j->first)->second))/bbox_diag + lambda*0.5*(std::get<2>(it_j->second.second) + std::get<2>(it_i->second.second));
+			
+			it_i->second.first = sum;
+		}
+
+		// update k-points
+			// find farther points
+		while (!queue.empty())
+		{
+			auto pair = queue.top();
+			queue.pop();
+			// get point query
+			Point query_point = std::get<0>(target_pointMap_->find_index(std::get<0>(pair))->second);
+			// compute distance to the closest k-point from query point
+			std::vector<std::pair<double, int>> dists(k, std::make_pair(0.0, 0));
+			int count = 0;
+			for (auto it_ = k_indices_and_sumdist.begin(); it_ != k_indices_and_sumdist.end(); it_++)
+			{
+				Point k_point = std::get<0>(target_pointMap_->find_index(it_->first)->second);
+				int index_k_point = target_pointMap_->find_index(it_->first)->first;
+				dists[count] = std::make_pair(compute_points_dist(query_point, k_point)/bbox_diag + lambda*0.5*(std::get<2>(it_->second.second) + std::get<3>(pair)), index_k_point);
+				count += 1;
+			}
+
+			std::pair<double, int> min_index = compute_min(dists, std::get<0>(pair1));
+			// update k-points set (if needed)
+			Point point_to_be_replaced = std::get<0>(target_pointMap_->find_index(dists[min_index.second].second)->second);
+			double sum = 0.0;
+			for (int i = 0; i < (int)dists.size(); i++)
+				sum += dists[i].first;
+			sum -= dists[min_index.second].first;
+
+			if (sum > k_indices_and_sumdist.find(dists[min_index.second].second)->second.first)
+			{
+				for (auto it_ = k_indices_and_sumdist.begin(); it_ != k_indices_and_sumdist.end(); it_++)
+				{
+					Point k_point = std::get<0>(target_pointMap_->find_index(it_->first)->second);
+					it_->second.first = it_->second.first + compute_points_dist(query_point, k_point) - compute_points_dist(point_to_be_replaced, k_point);
+				}
+
+				k_indices_and_sumdist.erase(k_indices_and_sumdist.find(dists[min_index.second].second));
+				k_indices_and_sumdist.insert(std::make_pair(std::get<0>(pair), std::make_pair(sum, std::make_tuple(std::get<1>(pair), std::get<2>(pair), std::get<3>(pair)))));
+			}
+				
+		}
+	
+		// fill vector of k farthest pair
+		for (auto it_ = k_indices_and_sumdist.begin(); it_ != k_indices_and_sumdist.end(); it_++)
+			queue_k_pairs.push(std::make_tuple(it_->first, std::get<0>(it_->second.second), std::get<1>(it_->second.second), std::get<2>(it_->second.second)));
+
+		// update priority queue
+		auto queue_k_pairs_copy = queue_k_pairs;
+		while (!queue_copy.empty())
+		{
+			if (!queue_k_pairs_copy.empty())
+			{
+				auto pair = queue_copy.top();
+				auto k_pair = queue_k_pairs_copy.top();
+				queue_copy.pop();
+				if (std::get<0>(pair) == std::get<0>(k_pair) && std::get<1>(pair) == std::get<1>(k_pair) && std::get<2>(pair) == std::get<2>(k_pair) && std::get<3>(pair) == std::get<3>(k_pair))
+					queue_k_pairs_copy.pop();
+				else
+					queue.push(pair);
+			}
+			else
+			{
+				auto pair = queue_copy.top();
+				queue_copy.pop();
+				queue.push(pair);
+			}
+		}
+	}
+
+	return queue_k_pairs;
 }
 
 
@@ -399,7 +530,7 @@ Eigen::Matrix4d RansacScheme::compute_rigid_transform(RansacScheme::triplet t, s
 }
 
 
-Scalar RansacScheme::registrationErr(Eigen::Matrix4d transform, RansacScheme::triplet& triplet)
+Scalar RansacScheme::registrationErr(Eigen::Matrix4d& transform, RansacScheme::triplet& triplet)
 {
 	Eigen::Matrix3d R = transform.block(0, 0, 3, 3);
 	Eigen::Vector3d T = transform.block(0, 3, 3, 1);
@@ -411,7 +542,7 @@ Scalar RansacScheme::registrationErr(Eigen::Matrix4d transform, RansacScheme::tr
 	return (err1 + err2 + err3) / 3.0;
 }
 
-Scalar RansacScheme::registrationErr(Eigen::Matrix4d transform, RansacScheme::triplet& triplet, std::tuple<int, int, Scalar, Scalar>& q)
+Scalar RansacScheme::registrationErr(Eigen::Matrix4d& transform, RansacScheme::triplet& triplet, std::tuple<int, int, Scalar, Scalar>& q)
 {
 	Eigen::Matrix3d R = transform.block(0, 0, 3, 3);
 	Eigen::Vector3d T = transform.block(0, 3, 3, 1);
@@ -432,7 +563,7 @@ Scalar RansacScheme::compute_angle(VectorType v1, VectorType v2)
 	return acos(dot_product / (norm_v1*norm_v2)); // en radians
 }
 
-Scalar RansacScheme::normalErr(Eigen::Matrix4d transform, RansacScheme::triplet& triplet)
+Scalar RansacScheme::normalErr(Eigen::Matrix4d& transform, RansacScheme::triplet& triplet)
 {
 
 	Eigen::Matrix3d R = transform.block(0, 0, 3, 3);
@@ -444,7 +575,7 @@ Scalar RansacScheme::normalErr(Eigen::Matrix4d transform, RansacScheme::triplet&
 	return (err1 + err2 + err3) / 3.0;
 }
 
-Scalar RansacScheme::normalErr(Eigen::Matrix4d transform, RansacScheme::triplet& triplet, std::tuple<int, int, Scalar, Scalar>& q)
+Scalar RansacScheme::normalErr(Eigen::Matrix4d& transform, RansacScheme::triplet& triplet, std::tuple<int, int, Scalar, Scalar>& q)
 {
 
 	Eigen::Matrix3d R = transform.block(0, 0, 3, 3);
@@ -510,10 +641,9 @@ Scalar RansacScheme::compute_scale(RansacScheme::triplet& triplet)
 }
 
 
-Eigen::Matrix4d RansacScheme::ransac_algorithm(int nb_iterations, Scalar max_err_scale, Scalar max_err_reg, Scalar max_err_norm)
+Eigen::Matrix4d RansacScheme::ransac_algorithm(int nb_iterations, Scalar max_err_scale, Scalar max_err_reg, Scalar max_err_norm, Scalar bbox_diag_ratio)
 {
 	int counter = 0;
-	Scalar bbox_diag_ratio = 8.0;
 	while (counter < nb_iterations && queue_ptr_->size() > 2)
 	{
 		//triplet t = pop_triplet();

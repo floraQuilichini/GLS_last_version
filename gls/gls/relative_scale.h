@@ -10,9 +10,10 @@ private:
 
 public:
 	PointMap(){};
-	void set_point_profiles_cost(std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>& point_gls_profiles, int nb_samples, int alpha = 1.0);
+	void set_point_profiles_cost(std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>& point_gls_profiles, int nb_samples, Scalar alpha = 1.0);
 	std::pair<std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>>::iterator, std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>>::iterator> get_iterator_range();
 	std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>>::iterator find_index(int index);
+	void erase_index(std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>>::iterator it);
 };
 
 

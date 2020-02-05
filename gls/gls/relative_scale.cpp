@@ -365,7 +365,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 		//compute point priority
 		std::map<Point, Scalar> target_priority, source_priority;
 //#pragma omp parallel for
-		for (int k=0; k<nb_target_points; k++)
+		for (int k=0; k<(int)nb_target_points; k++)
 		{
 			Scalar priority = compute_point_priority(std::get<2>(target_gls_profiles[k]), nb_samples, alpha);
 			target_priority.insert(std::make_pair(std::get<0>(target_gls_profiles[k]), priority));
@@ -373,7 +373,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 
 		//std::cout << "source cost : " << std::endl;
 //#pragma omp parallel for
-		for (int k = 0; k<nb_source_points; k++)
+		for (int k = 0; k<(int)nb_source_points; k++)
 		{
 			Scalar priority = compute_point_priority(std::get<2>(source_gls_profiles[k]), nb_samples, alpha);
 			source_priority.insert(std::make_pair(std::get<0>(source_gls_profiles[k]), priority));
@@ -384,7 +384,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 		tanh_lookup_table lookup_table(-2.0, 2.0, 400);
 
 		//max shift value
-		int max_shift = nb_samples - floor(nb_samples*ratio);
+		int max_shift = nb_samples - (int)floor(nb_samples*ratio);
 
 		// get W vector   -- slower than [w(0), w(1), w(2)].transpose() ?
 		Eigen::Array<Scalar,1,3> W;
@@ -393,7 +393,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 
 		// search for target->source matching
 //#pragma omp parallel for
-		for (int u = 0 ; u < target_gls_profiles.size() ; ++u)
+		for (int u = 0 ; u < (int)target_gls_profiles.size() ; ++u)
 		// for (std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>::iterator it_t = target_gls_profiles.begin(); it_t != target_gls_profiles.end(); ++it_t)
 		{
 			//std::cout << " p_target = " << std::get<0>(target_gls_profiles[u]).pos().transpose() << std::endl;
@@ -418,7 +418,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 			//clock_t tstart, tend;
 			//tstart = clock();
 //#pragma omp parallel for
-			for (int v = 0; v < source_gls_profiles.size(); ++v)
+			for (int v = 0; v < (int)source_gls_profiles.size(); ++v)
 			{
 				//std::cout << " p_source = " << std::get<0>(source_gls_profiles[v]).pos().transpose() << std::endl;
 				const std::vector<std::tuple<Scalar, Scalar, Scalar>> & ps_source_profile = std::get<1>(source_gls_profiles[v]);
@@ -568,7 +568,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 		//compute point priority
 		std::map<Point, Scalar> target_priority, source_priority;
 //#pragma omp parallel for
-		for (int k = 0; k<nb_target_points; k++)
+		for (int k = 0; k<(int)nb_target_points; k++)
 		{
 			Scalar priority = compute_point_priority(std::get<2>(target_gls_profiles[k]), nb_target_samples, alpha);
 			target_priority.insert(std::make_pair(std::get<0>(target_gls_profiles[k]), priority));
@@ -576,7 +576,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 
 		//std::cout << "source cost : " << std::endl;
 //#pragma omp parallel for
-		for (int k = 0; k<nb_source_points; k++)
+		for (int k = 0; k<(int)nb_source_points; k++)
 		{
 			Scalar priority = compute_point_priority(std::get<2>(source_gls_profiles[k]), nb_source_samples, alpha);
 			source_priority.insert(std::make_pair(std::get<0>(source_gls_profiles[k]), priority));
@@ -588,7 +588,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 
 		// search for target->source matching
 //#pragma omp parallel for
-		for (int u = 0; u < target_gls_profiles.size(); ++u)
+		for (int u = 0; u < (int)target_gls_profiles.size(); ++u)
 		{
 			const std::vector<std::tuple<Scalar, Scalar, Scalar>> & pt_target_profile = std::get<1>(target_gls_profiles[u]);
 			std::vector<Scalar> pt_tau_profile, pt_kappa_profile, pt_phi_profile;
@@ -610,7 +610,7 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 			//clock_t tstart, tend;
 			//tstart = clock();
 //#pragma omp parallel for
-			for (int v = 0; v < source_gls_profiles.size(); ++v)
+			for (int v = 0; v < (int)source_gls_profiles.size(); ++v)
 			{
 				//std::cout << " p_source = " << std::get<0>(source_gls_profiles[v]).pos().transpose() << std::endl;
 				const std::vector<std::tuple<Scalar, Scalar, Scalar>> & ps_source_profile = std::get<1>(source_gls_profiles[v]);
@@ -665,12 +665,12 @@ std::vector<std::tuple<Point, Point, Scalar, Scalar>> compute_3_closest_pairs(st
 }
 
 
-void PointMap::set_point_profiles_cost(std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>& point_gls_profiles, int nb_samples, int alpha)
+void PointMap::set_point_profiles_cost(std::vector<std::tuple<Point, std::vector<std::tuple<Scalar, Scalar, Scalar>>, std::vector<Scalar>>>& point_gls_profiles, int nb_samples, Scalar alpha)
 {
 	size_t nb_points = point_gls_profiles.size();
 
 
-	for (int k = 0; k<nb_points; k++)
+	for (int k = 0; k<(int)nb_points; k++)
 	{
 		// compute cost (ie priority)
 		Scalar priority = compute_point_priority(std::get<2>(point_gls_profiles[k]), nb_samples, alpha);
@@ -703,6 +703,12 @@ std::pair<std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>>::iterator, s
 std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>>::iterator PointMap::find_index(int index)
 {
 	return map_index_point_profiles_cost_.find(index);
+}
+
+
+void PointMap::erase_index(std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>>::iterator it)
+{
+	map_index_point_profiles_cost_.erase(it);
 }
 
 std::vector<std::tuple<std::pair<int, int>, Scalar, Scalar, Scalar>> compute_symmetric_pairs(PointMap& map_index_profiles_cost_source, PointMap& map_index_profiles_cost_target, Scalar ratio, int k, VectorType w, Scalar alpha, bool cross_check)
@@ -845,8 +851,8 @@ std::pair<Scalar, Scalar> compute_optimal_shift(Eigen::ArrayX3d& source_profiles
 
 	if (p >= q)
 	{
-		int min_shift = -floor((1.0 - ratio)*q);
-		int max_shift = (p - q) + floor((1.0 - ratio)*(Scalar)q);
+		int min_shift = -(int)floor((1.0 - ratio)*q);
+		int max_shift = (p - q) + (int)floor((1.0 - ratio)*(Scalar)q);
 
 		for (int shift = min_shift; shift < max_shift + 1; shift ++)
 		{

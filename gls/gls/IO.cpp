@@ -351,7 +351,7 @@ void write_relative_scale_and_matching_points(std::string output_filename, std::
 	// relative scale estimation
 	output_file << relative_scale_and_matching_points.first << std::endl; 
 	// Matching points and related scales
-	for (int i = 0; i < relative_scale_and_matching_points.second.size(); i++)
+	for (int i = 0; i < (int)relative_scale_and_matching_points.second.size(); i++)
 		output_file << std::get<0>(relative_scale_and_matching_points.second[i]).pos().transpose() << " " << std::get<1>(relative_scale_and_matching_points.second[i]).pos().transpose() << " " << std::get<2>(relative_scale_and_matching_points.second[i]) << std::endl;
 
 	output_file.close();
@@ -363,7 +363,7 @@ void write_matching_points(std::string output_filename, std::vector<std::pair<Po
 	std::ofstream output_file;
 	output_file.open(output_filename, ios::out);
 	// Matching points
-	for (int i = 0; i < matching_points.size(); i++)
+	for (int i = 0; i < (int)matching_points.size(); i++)
 		output_file << (matching_points[i].first).pos().transpose() << " " << (matching_points[i].second).pos().transpose() << std::endl;
 
 	output_file.close();
@@ -388,7 +388,7 @@ void write_closest_matching_points(Point& target_point, std::vector<std::tuple<P
 	else
 		output_file.open(output_filename, ios::app);
 
-	for (int i = 0; i < pairs_source_and_scale.size(); i++)
+	for (int i = 0; i < (int)pairs_source_and_scale.size(); i++)
 		output_file << target_point.pos().transpose() << " " << std::get<0>(pairs_source_and_scale[i]).pos().transpose() << " " << std::get<1>(pairs_source_and_scale[i]) << " " << std::get<2>(pairs_source_and_scale[i]) << std::endl;
 
 	output_file.close();
@@ -402,7 +402,7 @@ void write_closest_matching_points(const Point& target_point, std::vector<std::t
 	else
 		output_file.open(output_filename, ios::app);
 
-	for (int i = 0; i < pairs_source_and_scale.size(); i++)
+	for (int i = 0; i < (int)pairs_source_and_scale.size(); i++)
 		output_file << target_point.pos().transpose() << " " << std::get<0>(pairs_source_and_scale[i]).pos().transpose() << " " << std::get<1>(pairs_source_and_scale[i]) << " " << std::get<2>(pairs_source_and_scale[i]) << std::endl;
 
 	output_file.close();
@@ -417,7 +417,7 @@ void write_closest_matching_points(Point& target_point, std::vector<std::tuple<i
 	else
 		output_file.open(output_filename, ios::app);
 
-	for (int i = 0; i < pairs_source_lag_and_corr.size(); i++)
+	for (int i = 0; i < (int)pairs_source_lag_and_corr.size(); i++)
 		output_file << target_point.pos().transpose() << " " << std::get<1>(pairs_source_lag_and_corr[i]).pos().transpose() << " " << std::get<2>(pairs_source_lag_and_corr[i]) << " " << std::get<4>(pairs_source_lag_and_corr[i]) << std::endl;
 
 	output_file.close();
@@ -449,12 +449,10 @@ void write_closest_matching_points(pair_priority_queue& queue, PointMap* source_
 
 void write_tuples(std::string& filename, pair_priority_queue queue, PointMap* source_pointMap, PointMap* target_pointMap, Scalar max_err_scale)
 {
-	std::ofstream output_file;
-	output_file.open(filename, ios::out);
 	RansacScheme ransac(queue, source_pointMap, target_pointMap);
 	int nb_triplets = 0;
-	// write triplets
-	output_file << nb_triplets << std::endl;
+	// get good (with respect to scale) triplets
+	std::vector<std::pair<RansacScheme::triplet, Scalar>> buffer;
 	while ((int)queue.get_queue_size() > 3)
 	{
 		RansacScheme::triplet triplet = ransac.pop_3_farthest_pairs();
@@ -462,17 +460,53 @@ void write_tuples(std::string& filename, pair_priority_queue queue, PointMap* so
 		if (err_scale <= max_err_scale)
 		{
 			Scalar scale = 1.0/ransac.compute_scale(triplet);
-			output_file << std::get<0>(triplet.pair1) << " " << std::get<1>(triplet.pair1) << " " << scale << std::endl;
-			output_file << std::get<0>(triplet.pair2) << " " << std::get<1>(triplet.pair2) << " " << scale << std::endl;
-			output_file << std::get<0>(triplet.pair3) << " " << std::get<1>(triplet.pair3) << " " << scale << std::endl;
+			buffer.push_back(std::make_pair(triplet, scale));
 			nb_triplets += 1;
 		}
 	}
 
-	// write nb triplets
-	output_file.seekp(0, ios::beg);
+	// write triplets
+	std::ofstream output_file;
+	output_file.open(filename, ios::out);
 	output_file << nb_triplets << std::endl;
+	for (int i = 0; i < (int)buffer.size(); i++)
+	{
+		output_file << std::get<0>(buffer[i].first.pair1) << " " << std::get<1>(buffer[i].first.pair1) << " " << buffer[i].second << std::endl;
+		output_file << std::get<0>(buffer[i].first.pair2) << " " << std::get<1>(buffer[i].first.pair2) << " " << buffer[i].second << std::endl;
+		output_file << std::get<0>(buffer[i].first.pair3) << " " << std::get<1>(buffer[i].first.pair3) << " " << buffer[i].second << std::endl;
+	}
 
 	output_file.close();
 	
+}
+
+
+void write_kpairs(std::string& filename, pair_priority_queue queue, PointMap* source_pointMap, PointMap* target_pointMap, Scalar max_err_scale, int nb_kpairs, Scalar bbox_diag_ratio)
+{
+	RansacScheme ransac(queue, source_pointMap, target_pointMap);
+	std::vector<std::pair<std::tuple<int, int, Scalar, Scalar>, Scalar>> buffer;
+	int counter = 0;
+	while (queue.get_queue_size() > nb_kpairs - 1)
+	{
+		auto k_farthest_pairs = ransac.pop_k_farthest_pairs(*queue.get_queue_ptr(), bbox_diag_ratio, nb_kpairs);
+		while (!k_farthest_pairs.empty())
+		{
+			auto pair = k_farthest_pairs.top();
+			Scalar scale = 1.0 / std::get<2>(pair);
+			k_farthest_pairs.pop();
+			buffer.push_back(std::make_pair(pair, scale));
+
+		}
+		counter += 1;
+	}
+
+	// write pairs
+	std::ofstream output_file;
+	output_file.open(filename, ios::out);
+	output_file << counter*nb_kpairs << std::endl;
+	for (int i = 0; i < (int)buffer.size(); i++)
+		output_file << std::get<0>(buffer[i].first) << " " << std::get<1>(buffer[i].first) << " " << buffer[i].second << std::endl;
+
+	output_file.close();
+
 }

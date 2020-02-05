@@ -30,14 +30,14 @@ pair_priority_queue::pair_priority_queue(const std::tuple<int, int, Scalar, Scal
 
 pair_priority_queue::pair_priority_queue(const std::vector<std::tuple<int, int, Scalar, Scalar>>& vec_pair)
 {
-	for (int i=0; i<vec_pair.size(); i++)
+	for (int i=0; i<(int)vec_pair.size(); i++)
 		queue_.push(vec_pair[i]);
 }
 
 pair_priority_queue::pair_priority_queue(const std::vector<std::tuple<int, int, Scalar, Scalar>>& vec_pair, Scalar min_source_scale, Scalar min_target_scale, Scalar base)
 {
 	
-	for (int i = 0; i < vec_pair.size(); i++)
+	for (int i = 0; i < (int)vec_pair.size(); i++)
 	{
 		// compute scale 
 		Scalar lag = std::get<2>(vec_pair[i]);
@@ -51,7 +51,7 @@ pair_priority_queue::pair_priority_queue(const std::vector<std::tuple<int, int, 
 pair_priority_queue::pair_priority_queue(const std::vector<std::tuple<int, int, Scalar, Scalar, Scalar>>& vec_pair, Scalar min_source_scale, Scalar min_target_scale, Scalar base)
 {
 
-	for (int i = 0; i < vec_pair.size(); i++)
+	for (int i = 0; i < (int)vec_pair.size(); i++)
 	{
 		// compute scale 
 		Scalar lag = std::get<2>(vec_pair[i]);
@@ -67,7 +67,7 @@ pair_priority_queue::pair_priority_queue(const std::vector<std::tuple<std::pair<
 {
 	source_pointMap_ = source_pointMap;
 	target_pointMap_ = target_pointMap;
-	for (int i = 0; i < vec_pair.size(); i++)
+	for (int i = 0; i < (int)vec_pair.size(); i++)
 	{
 		// compute scale 
 		Scalar lag = std::get<1>(vec_pair[i]);
