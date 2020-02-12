@@ -14,6 +14,7 @@ public:
 	std::pair<std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>>::iterator, std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>>::iterator> get_iterator_range();
 	std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>>::iterator find_index(int index);
 	void erase_index(std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scalar>>::iterator it);
+	size_t get_size();
 };
 
 

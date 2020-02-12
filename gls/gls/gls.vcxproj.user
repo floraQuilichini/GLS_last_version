@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LocalDebuggerCommandArguments>C:\Registration\test_gls_algo\matching_files\small_meshes_matching_files\temp\bunny_simp_profiles.txt  C:\Registration\test_gls_algo\matching_files\small_meshes_matching_files\temp\bunny_simp_rX45_t0-4-3_s0.5_profiles.txt C:\Registration\test_gls_algo\transform_files\transform.txt</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>C:\Registration\test_gls_algo\matching_files\small_meshes_matching_files\temp\bunny_simp_profiles.txt  C:\Registration\test_gls_algo\matching_files\small_meshes_matching_files\temp\bunny_simp_rX45_t0-4-3_s0.5_downsampled_profiles.txt C:\Registration\test_gls_algo\transform_files\transform.txt</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

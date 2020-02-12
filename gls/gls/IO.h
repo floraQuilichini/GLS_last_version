@@ -42,6 +42,8 @@ void write_closest_matching_points(Point& target_point, std::vector<std::tuple<i
 
 void write_closest_matching_points(pair_priority_queue& queue, PointMap* source_pointMap, PointMap* target_pointMap, std::string& output_filename, bool new_file = false);
 
-void write_tuples(std::string& filename, pair_priority_queue queue, PointMap* source_pointMap, PointMap* target_pointMap, Scalar max_err_scale);
+void write_tuples(std::string& filename, pair_priority_queue queue, PointMap* source_pointMap, PointMap* target_pointMap, Scalar max_err_scale, Scalar bbox_diag, Scalar lambda);
 
-void write_kpairs(std::string& filename, pair_priority_queue queue, PointMap* source_pointMap, PointMap* target_pointMap, Scalar max_err_scale, int nb_pairs, Scalar bbox_size);
+void write_kpairs(std::string& filename, pair_priority_queue queue, PointMap* source_pointMap, PointMap* target_pointMap, Scalar max_err_scale, int nb_pairs, Scalar bbox_size, Scalar lambda);
+
+void write_ply_file_for_debug(std::string& filename, PointMap* target_pointMap, std::priority_queue<std::tuple<int, int, Scalar, Scalar>, std::vector<std::tuple<int, int, Scalar, Scalar>>, mycomparison> k_pair_queue, int index_first_point);

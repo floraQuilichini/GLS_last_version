@@ -711,6 +711,8 @@ void PointMap::erase_index(std::map<int, std::tuple<Point, Eigen::ArrayX3d, Scal
 	map_index_point_profiles_cost_.erase(it);
 }
 
+size_t  PointMap::get_size() { return map_index_point_profiles_cost_.size(); }
+
 std::vector<std::tuple<std::pair<int, int>, Scalar, Scalar, Scalar>> compute_symmetric_pairs(PointMap& map_index_profiles_cost_source, PointMap& map_index_profiles_cost_target, Scalar ratio, int k, VectorType w, Scalar alpha, bool cross_check)
 {
 	Scalar ratio_corr = 0.9;

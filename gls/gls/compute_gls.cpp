@@ -409,26 +409,50 @@ int main(int argc, char** argv)
 	Scalar max_err_norm = 0.35;
 	int nb_kpairs = 12;
 	Scalar bbox_diag_ratio = 8.0;
-	//pair_priority_queue queue(three_closest_pairs, min_source_scale, min_target_scale, base);
-	pair_priority_queue queue(symmetric_pairs, &map_index_profiles_cost_source, &map_index_profiles_cost_target, min_source_scale, min_target_scale, base);
-	//queue.display_queue();
-	std::string output_filename = "C:\\Registration\\test_gls_algo\\matching_pairs\\source_matching_pairs.txt";
-	std::string kpairs_filename = "C:\\Registration\\test_gls_algo\\matching_pairs\\kpairs_file.txt";
-	//std::string tuple_filename = "C:\\Registration\\test_gls_algo\\matching_pairs\\tuple_file.txt";
-	write_closest_matching_points(queue, &map_index_profiles_cost_source, &map_index_profiles_cost_target, output_filename, false);
-	write_kpairs(kpairs_filename, queue, &map_index_profiles_cost_source, &map_index_profiles_cost_target, max_err_scale, nb_kpairs, bbox_diag_ratio);
-	//write_tuples(tuple_filename, queue, &map_index_profiles_cost_source, &map_index_profiles_cost_target, max_err_scale);
-	std::chrono::high_resolution_clock::time_point t0 = std::chrono::high_resolution_clock::now();
-	RansacScheme ransac(queue, &map_index_profiles_cost_source, &map_index_profiles_cost_target);
-	Eigen::Matrix4d transform = ransac.ransac_algorithm(nb_iterations, max_err_scale, max_err_reg, max_err_norm, bbox_diag_ratio);
-	std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
-	std::chrono::nanoseconds ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0);
-	std::cout << "It took " << ns.count() << " nanosecond(s) to run RANSAC" << std::endl;
+	Scalar bbox_diag = 25.0;
+	Scalar lambda = 0.0;
+	for (int i = 0; i < 101; i += 1)
+	{
+		lambda = 0.01*(Scalar)i;
+		char kpairs_filename[100];
+		std::strcpy(kpairs_filename, "C:\\Registration\\test_gls_algo\\matching_pairs\\");
+		std::strcat(kpairs_filename, std::to_string(nb_kpairs).c_str());
+		std::strcat(kpairs_filename, "pairs_lambda");
+		std::strcat(kpairs_filename, std::to_string(i).c_str());
+		std::strcat(kpairs_filename, "_file.txt");
+		//pair_priority_queue queue(three_closest_pairs, min_source_scale, min_target_scale, base);
+		pair_priority_queue queue(symmetric_pairs, &map_index_profiles_cost_source, &map_index_profiles_cost_target, min_source_scale, min_target_scale, base);
+		//queue.display_queue();
+		//std::string output_filename = "C:\\Registration\\test_gls_algo\\matching_pairs\\source_matching_pairs.txt";
+		//std::string kpairs_filename = "C:\\Registration\\test_gls_algo\\matching_pairs\\kpairs_file.txt";
+		//std::string tuple_filename = "C:\\Registration\\test_gls_algo\\matching_pairs\\tuple_file.txt";
+		//write_closest_matching_points(queue, &map_index_profiles_cost_source, &map_index_profiles_cost_target, output_filename, false);
+		//write_kpairs((std::string)kpairs_filename, queue, &map_index_profiles_cost_source, &map_index_profiles_cost_target, max_err_scale, nb_kpairs, bbox_diag, lambda);
+		//write_tuples(tuple_filename, queue, &map_index_profiles_cost_source, &map_index_profiles_cost_target, max_err_scale, bbox_diag, lambda);
+		char debug_file[100];
+		std::strcpy(debug_file, "C:\\Registration\\test_gls_algo\\test_algo_kppl\\target_with_lambda");
+		std::strcat(debug_file, std::to_string(i).c_str());
+		std::strcat(debug_file, ".ply");
+		std::chrono::high_resolution_clock::time_point t0 = std::chrono::high_resolution_clock::now();
+		RansacScheme ransac(queue, &map_index_profiles_cost_source, &map_index_profiles_cost_target);
+		Eigen::Matrix4d transform = ransac.ransac_algorithm(nb_iterations, max_err_scale, max_err_reg, max_err_norm, bbox_diag_ratio, lambda, nb_kpairs, (std::string)debug_file);
+		std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+		std::chrono::nanoseconds ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0);
+		std::cout << "It took " << ns.count() << " nanosecond(s) to run RANSAC" << std::endl;
 
-	//std::cout << "transform : " << transform << std::endl;
+		//std::cout << "transform : " << transform << std::endl;
 
-	// write transform
-	write_matrix_transform(transform, transform_filename);
+		// write transform
+		//write_matrix_transform(transform, transform_filename);
+		char filename_transform[100];
+		std::strcpy(filename_transform, "C:\\Registration\\test_gls_algo\\transform_files\\");
+		std::strcat(filename_transform, "transform_with_");
+		std::strcat(filename_transform, std::to_string(nb_kpairs).c_str());
+		std::strcat(filename_transform, "pairs_lambda");
+		std::strcat(filename_transform, std::to_string(i).c_str());
+		std::strcat(filename_transform, ".txt");
+		write_matrix_transform(transform, (std::string)filename_transform);
+	}
 
 	return 0;
 

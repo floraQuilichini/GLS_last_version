@@ -447,7 +447,7 @@ void write_closest_matching_points(pair_priority_queue& queue, PointMap* source_
 
 
 
-void write_tuples(std::string& filename, pair_priority_queue queue, PointMap* source_pointMap, PointMap* target_pointMap, Scalar max_err_scale)
+void write_tuples(std::string& filename, pair_priority_queue queue, PointMap* source_pointMap, PointMap* target_pointMap, Scalar max_err_scale, Scalar bbox_diag, Scalar lambda)
 {
 	RansacScheme ransac(queue, source_pointMap, target_pointMap);
 	int nb_triplets = 0;
@@ -455,7 +455,8 @@ void write_tuples(std::string& filename, pair_priority_queue queue, PointMap* so
 	std::vector<std::pair<RansacScheme::triplet, Scalar>> buffer;
 	while ((int)queue.get_queue_size() > 3)
 	{
-		RansacScheme::triplet triplet = ransac.pop_3_farthest_pairs();
+		//RansacScheme::triplet triplet = ransac.pop_3_farthest_pairs();
+		RansacScheme::triplet triplet = ransac.pop_3_farthest_pairs(bbox_diag, lambda);
 		Scalar err_scale = ransac.scaleDiff(triplet).first;
 		if (err_scale <= max_err_scale)
 		{
@@ -481,14 +482,14 @@ void write_tuples(std::string& filename, pair_priority_queue queue, PointMap* so
 }
 
 
-void write_kpairs(std::string& filename, pair_priority_queue queue, PointMap* source_pointMap, PointMap* target_pointMap, Scalar max_err_scale, int nb_kpairs, Scalar bbox_diag_ratio)
+void write_kpairs(std::string& filename, pair_priority_queue queue, PointMap* source_pointMap, PointMap* target_pointMap, Scalar max_err_scale, int nb_kpairs, Scalar bbox_diag, Scalar lambda)
 {
 	RansacScheme ransac(queue, source_pointMap, target_pointMap);
 	std::vector<std::pair<std::tuple<int, int, Scalar, Scalar>, Scalar>> buffer;
 	int counter = 0;
 	while (queue.get_queue_size() > nb_kpairs - 1)
 	{
-		auto k_farthest_pairs = ransac.pop_k_farthest_pairs(*queue.get_queue_ptr(), bbox_diag_ratio, nb_kpairs);
+		auto k_farthest_pairs = ransac.pop_k_farthest_pairs(*queue.get_queue_ptr(), bbox_diag, nb_kpairs, lambda);
 		while (!k_farthest_pairs.empty())
 		{
 			auto pair = k_farthest_pairs.top();
@@ -509,4 +510,53 @@ void write_kpairs(std::string& filename, pair_priority_queue queue, PointMap* so
 
 	output_file.close();
 
+}
+
+
+void write_ply_file_for_debug(std::string& filename, PointMap* target_pointMap, std::priority_queue<std::tuple<int, int, Scalar, Scalar>, std::vector<std::tuple<int, int, Scalar, Scalar>>, mycomparison> k_pair_queue, int index_first_point)
+{
+	int nb_vertex = target_pointMap->get_size();
+	// write header
+	std::ofstream output_file;
+	output_file.open(filename, ios::out);
+	output_file << "ply" << std::endl;
+	output_file << "format ascii 1.0" << std::endl;
+	output_file << "comment created by gls for debug" << std::endl;
+	output_file << "element vertex " << std::to_string(nb_vertex).c_str() << std::endl;
+	output_file << "property float x" << std::endl;
+	output_file << "property float y" << std::endl;
+	output_file << "property float z" << std::endl;
+	output_file << "property uchar red" << std::endl;
+	output_file << "property uchar green" << std::endl;
+	output_file << "property uchar blue" << std::endl;
+	output_file << "end_header" << std::endl;
+
+	// write points from kpairs_queue
+	std::set<int> used_index;
+	while (!k_pair_queue.empty())
+	{
+		auto pair = k_pair_queue.top();
+		int index = std::get<0>(pair);
+		Point& p =std::get<0> (target_pointMap->find_index(index)->second);
+		if (index == index_first_point)
+			output_file << p.pos().transpose() << " " << "255 0 0" << std::endl;
+		else
+			output_file << p.pos().transpose() << " " << "0 255 0" << std::endl;
+		used_index.insert(index);
+		k_pair_queue.pop();
+	}
+
+	// write others points
+	for (int i = 0; i<nb_vertex; i++)
+	{
+		if (i == *used_index.begin())
+			used_index.erase(used_index.begin());
+		else
+		{
+			Point& p = std::get<0>(target_pointMap->find_index(i)->second);
+			output_file << p.pos().transpose() << " " << "0 0 0" << std::endl;
+		}
+	}
+
+	output_file.close();
 }
