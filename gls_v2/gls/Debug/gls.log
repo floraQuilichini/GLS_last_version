@@ -1,0 +1,8 @@
+﻿  stdafx.cpp
+  relative_scale.cpp
+c:\registration\gls\gls\gls\relative_scale.cpp(8): fatal error C1083: Cannot open include file: 'Eigen/Eigen': No such file or directory
+  IO.cpp
+c:\registration\gls\gls\gls\io.cpp(11): fatal error C1083: Cannot open include file: 'Patate/grenaille.h': No such file or directory
+  compute_gls.cpp
+c:\registration\gls\gls\gls\compute_gls.cpp(15): fatal error C1083: Cannot open include file: 'Patate/grenaille.h': No such file or directory
+  Generating Code...

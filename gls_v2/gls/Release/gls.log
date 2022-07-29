@@ -1,0 +1,8 @@
+﻿  matching_prioritization.cpp
+  Generating code
+  1 of 8363 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    54 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  gls.vcxproj -> C:\Registration\GLS\gls\Release\compute_gls.exe
+  gls.vcxproj -> C:\Registration\GLS\gls\Release\compute_gls.pdb (Full PDB)
