@@ -13,7 +13,7 @@ Our main code is located in the file "/gls/compute_gls.cpp".
 4 applications can be generated with our GLS code : 
    - 1st application : computing GLS descriptors. <br />
      Uncomment from line 138 to line 254 and Comment from line 256 to end <br />
-     Then, to test the code, use the data contained in the folder "meshes" and run the following command in a terminal: <br />
+     Then, to test the code, use the data contained in the folder "meshes" and give the following arguments to the main : <br />
      bunny_source.ply  bunny_source_earKeypoint.ply  0.1292 4.9115 500 bunny_profiles.txt 1  <br />
      The first parameter is the original mesh/point cloud.<br />
      The second parameter is a subset of keypoints from the original point cloud. GLS will be computed on these keypoints. <br />
@@ -32,7 +32,7 @@ Our main code is located in the file "/gls/compute_gls.cpp".
       This application is the continuity of the first one. To make it works, the user must first compute the descriptors on the two objects A and B he wants to register. <br />
       So, he will have to run 1rst application on object A, 1rst application on object B, and then use both the generated descriptor files in application 2. <br /> 
       The folder "data_example_2" contains the results that one would obtained if he ran application 1 on both source and target meshes contained "data_example_1" <br />
-      To test the code, use the data contained in the folder "profiles" and run the following command in a terminal: <br />
+      To test the code, use the data contained in the folder "profiles" and give to the main the following arguents : <br />
       bunny_source_ear_point_profiles.txt  bunny_target_ear_point_profiles.txt  bunny_ear_matching.txt 1 <br />
       The first parameter is the descriptor file of object A (in our case bunny_source) for the selected keypoints a (in our case bunny_source_earKeyoint.ply). <br />
       The second parameter is the descriptor file of object B (in our case bunny_target).for the selected keypoints b (in our case bunny_target_earKeyoint.ply).  <br />
@@ -48,7 +48,7 @@ Our main code is located in the file "/gls/compute_gls.cpp".
         Comment from line 138 to 331 and from line 372 to the end. Uncomment from line 334 to line 369. <br />
         This third application is an alternative to the second application, in the case where the 2 objects share the same scale (or have been rescaled upstream). 
         Then, this application computes the matching pairs from the generated descriptor files of the two same-scale objects.
-        To test the code, use the data contained in the folder "profiles" and run the following command in a terminal: <br />
+        To test the code, use the data contained in the folder "profiles" and put the following arguments: <br />
         bunny_vsa_profiles.txt  bunny_downsampled_vsa_profiles.txt bunny_vsa_bunny_downsampled_vsa_matching.txt <br />
         The first parameter is the descriptor file of object A (in our case source_bunny). <br />
         The second parameter is the descriptor file of object B (in our case target_bunny). <br />
@@ -58,7 +58,7 @@ Our main code is located in the file "/gls/compute_gls.cpp".
         Comment from line 138 to line 370. Uncomment from line 372 to the end. <br />
         This application takes the profiles files (computed in app 1 - with geometric variations -) of objects A and B  in order to estimate the matching points. Then, this subset of matching point is given to the RANSAC algorithm that will output the transform T between the two objects to register. <br />
         From 2 objects to register, the following steps to get to the estimated transform are : run app 1 (with geometric variation) and run app 4. <br />
-        To test the code, use the data contained in the folder "profiles" and run the following command in a terminal: <br />
+        To test the code, use the data contained in the folder "profiles" and put the following arguments : <br />
         bunny_simp_profiles.txt  bunny_simp_rX45_t0-4-3_s0.5_profiles.txt transform.txt
         (or bunny_simp_profiles.txt  bunny_simp_rX45_t0-4-3_s0.5_downsampled_profiles.txt transform.txt)
         These profiles files have been generated thanks to application 1 with the original meshes "bunny_simp.ply" and "bunny_simp_rX45_t0-4-3_s0.5.ply" with the commands : <br />
