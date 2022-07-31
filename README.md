@@ -14,15 +14,18 @@ Our main code is located in the file "/gls/compute_gls.cpp".
    - 1st application : computing GLS descriptors. <br />
      Uncomment from line 138 to line 254 and Comment from line 256 to end <br />
      Then, to test the code, use the data contained in the folder "data_example_1" and run the following command in a terminal: <br />
-     bunny.ply  bunny_source_interest_point.ply  0.1292 4.9115 500 bunny_profiles.txt 1  <br />
+     bunny_source.ply  bunny_source_earKeypoint.ply  0.1292 4.9115 500 bunny_profiles.txt 1  <br />
      The first parameter is the original mesh/point cloud.<br />
      The second parameter is a subset of keypoints from the original point cloud. GLS will be computed on these keypoints. <br />
+     In the example given, the keypoints file contains only one peculiar keypoint <br />
      The third and fourth parameters are respectively the minimum and maximum scale (see "https://www.researchgate.net/publication/286510263_Relative_Scale_Estimation_and_3D_Registration_of_Multi-Modal_Geometry_Using_Growing_Least_Squares" p6)
      A good choice for the minimum scale is to take the minimum of the average edge length (for mesh) (or point distance (for point cloud)) between the two objects to register. 
      A good choice for the maximum scale is to take the bigest bounding box diagonal between the two objects to register. Another valid choice is to take the maximum of the average edge length between the two objects, and multiply it by a big consant (let's say 5). <br />
      The fifth parameter is the number of scale samples (see "https://www.researchgate.net/publication/286510263_Relative_Scale_Estimation_and_3D_Registration_of_Multi-Modal_Geometry_Using_Growing_Least_Squares" p6)<br />
      The sixth parameter is the output filename where the algorithm will write the point profiles (i.e. the descriptor)
      and the optional last parameter is a boolean to set to 1 if we want the algorithm to compute and write the geometric variations. <br />
+     NB : We will give one more example where the keypoints file contains sevveral points (computed thanks to VSA detector) : <br />
+      bunny_source.ply  bunny_vsa.ply  0.1292 4.9115 500 bunny_vsa_profiles.txt 1  <br />
      
      - 2nd application : Estimate the relative scale between the two object to register & Estimate the matching points between the two objects <br />
       Uncomment from line 256 to line 331 and Comment from line 138 to 254 and from line 334 to end. <br />
@@ -30,11 +33,16 @@ Our main code is located in the file "/gls/compute_gls.cpp".
       So, he will have to run 1rst application on object A, 1rst application on object B, and then use both the generated descriptor files in application 2. <br /> 
       The folder "data_example_2" contains the results that one would obtained if he ran application 1 on both source and target meshes contained "data_example_1" <br />
       To test the code, use the data contained in the folder "data_example_2" and run the following command in a terminal: <br />
-      bunny_vsa_complete_profiles.txt  bunny_downsampled_vsa_complete_profiles.txt  bunny_vsa_bunny_downsampled_vsa_matching.txt 1 <br />
-      The first parameter is the descriptor file of object A (in our case source_bunny). <br />
-      The second parameter is the descriptor file of object B (in our case target_bunny). <br />
+      bunny_source_ear_point_profiles.txt  bunny_target_ear_point_profiles.txt  bunny_ear_matching.txt 1 <br />
+      The first parameter is the descriptor file of object A (in our case bunny_source) for the selected keypoints a (in our case bunny_source_earKeyoint.ply). <br />
+      The second parameter is the descriptor file of object B (in our case bunny_target).for the selected keypoints b (in our case bunny_target_earKeyoint.ply).  <br />
       The third parameter is the output filename where the algorithm will write the corresponding pairs of points and the estimated scale factor. <br />
-      The last parameter is optional and must be consistant with what you choose for last parameter in application 1. If you didnt add the optional parameter in application 1, don't add it here. Otherwise, do so. 
+      The last parameter is optional and must be consistant with what you choose for last parameter in application 1. If you didnt add the optional parameter in application 1, don't add it here. Otherwise, do so. <br />
+     
+      NB : The previous example has benn given to demonstrate that the algorithm is good at determining the relative scale between two object when the matching is perfect (in the previous case, we have only one to one correspondance and we selected both keypoints on the ear manually, in order to be sure that they completely match). <br /> 
+      The following example will demonstrate that the algorithm is good at making matching pairs. 
+      bunny_vsa_complete_profiles.txt  bunny_downsampled_vsa_complete_profiles.txt  bunny_vsa_bunny_downsampled_vsa_matching.txt 1 <br />
+      In this example, the profile have been generated with application 1 on from the same initial point cloud (bunny_source.ply) but with different keypoints (bunny_vsa.ply and bunny_downsampled_vsa.ply)
       
       - 3rd application : Compute the matching pair after having rescaled upstream the object <br />
         Comment from line 138 to 331 and from line 372 to the end. Uncomment from line 334 to line 369. <br />
