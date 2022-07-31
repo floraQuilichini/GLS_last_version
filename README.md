@@ -16,7 +16,7 @@ Our main code is located in the file "/gls/compute_gls.cpp".
      Then, to test the code, use the data contained in the folder "data_example_1" and run the following command in a terminal: 
      bunny.ply  bunny_source_interest_point.ply  0.1292 4.9115 500 bunny_profiles.txt 1 
      
-     The first parameter is the original mesh/point cloud
+     The first parameter is the original mesh/point cloud.
      The second parameter is a subset of keypoints from the original point cloud. GLS will be computed on these keypoints. 
      The third and fourth parameters are respectively the minimum and maximum scale (see "https://www.researchgate.net/publication/286510263_Relative_Scale_Estimation_and_3D_Registration_of_Multi-Modal_Geometry_Using_Growing_Least_Squares" p6)
      A good choice for the minimum scale is to take the minimum of the average edge length (for mesh) (or point distance (for point cloud)) between the two objects to register. 
