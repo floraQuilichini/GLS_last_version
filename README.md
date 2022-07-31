@@ -14,16 +14,15 @@ Our main code is located in the file "/gls/compute_gls.cpp".
    - 1st application : computing GLS descriptors. 
      Uncomment from line 138 to line 254 and Comment from line 256 to end
      Then, to test the code, use the data contained in the folder "data_example_1" and run the following command in a terminal: 
-     bunny.ply  bunny_source_interest_point.ply  0.1292 4.9115 500 bunny_profiles.txt 1 
-     
-     The first parameter is the original mesh/point cloud.
-     The second parameter is a subset of keypoints from the original point cloud. GLS will be computed on these keypoints. 
+     bunny.ply  bunny_source_interest_point.ply  0.1292 4.9115 500 bunny_profiles.txt 1  <br />
+     The first parameter is the original mesh/point cloud.<br />
+     The second parameter is a subset of keypoints from the original point cloud. GLS will be computed on these keypoints. <br />
      The third and fourth parameters are respectively the minimum and maximum scale (see "https://www.researchgate.net/publication/286510263_Relative_Scale_Estimation_and_3D_Registration_of_Multi-Modal_Geometry_Using_Growing_Least_Squares" p6)
      A good choice for the minimum scale is to take the minimum of the average edge length (for mesh) (or point distance (for point cloud)) between the two objects to register. 
-     A good choice for the maximum scale is to take the bigest bounding box diagonal between the two objects to register. Another valid choice is to take the maximum of the average edge length between the two objects, and multiply it by a big consant (let's say 5). 
-     The fifth parameter is the number of scale samples (see "https://www.researchgate.net/publication/286510263_Relative_Scale_Estimation_and_3D_Registration_of_Multi-Modal_Geometry_Using_Growing_Least_Squares" p6)
+     A good choice for the maximum scale is to take the bigest bounding box diagonal between the two objects to register. Another valid choice is to take the maximum of the average edge length between the two objects, and multiply it by a big consant (let's say 5). <br />
+     The fifth parameter is the number of scale samples (see "https://www.researchgate.net/publication/286510263_Relative_Scale_Estimation_and_3D_Registration_of_Multi-Modal_Geometry_Using_Growing_Least_Squares" p6)<br />
      The sixth parameter is the output filename where the algorithm will write the point profiles (i.e. the descriptor)
-     and the optional last parameter is a boolean to set to 1 if we want the algorithm to compute and write the geometric variations. 
+     and the optional last parameter is a boolean to set to 1 if we want the algorithm to compute and write the geometric variations. <br />
      
      - 2nd application : Estimate the relative scale between the two object to register & Estimate the matching points between the two objects
       Uncomment from line 256 to line 331 and Comment from line 138 to 254 and from line 334 to end. 
